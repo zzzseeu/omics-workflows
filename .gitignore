@@ -8,3 +8,6 @@ reports/
 .conda/
 __pycache__/
 *.pyc
+
+# Local editor settings.
+/.vscode/
