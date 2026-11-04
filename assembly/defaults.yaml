@@ -1,0 +1,64 @@
+# Shared defaults; project configuration overrides these values.
+ploidy: null
+genome_size_bp: null
+chromosomes_per_haplotype: null
+assembly:
+  backend: hifiasm
+  mode: hifi_only
+  representation: primary_alternate
+  threads: 8
+  mem_mb: 64000
+  bloom_filter_bits: 37
+  purge_level: null
+genome_profile:
+  enabled: false
+scaffolding:
+  enabled: false
+  backend: haphic
+  threads: 8
+  mem_mb: 64000
+  processes: 4
+  restriction_sites: GATC
+  enzyme_provenance: UNKNOWN_DEFAULT
+  correct_nrounds: 0
+  gap_size: 100
+  mapq: 1
+  nm_exclusive: 3
+  hic_reference: combined
+  min_retained_fraction: 0.001
+  plot_bin_kb: 500
+  review_agp: null
+  review_manifest: null
+finishing:
+  enabled: false
+  gap_closing: false
+  telomere_completion: false
+  source_delivery: null
+  telomere_motif: null
+  threads: 8
+  mem_mb: 64000
+  min_anchor: 2000
+  min_identity: 0.99
+  min_mapq: 30
+  min_support: 3
+  local_window: 20000
+  max_span: 1000000
+polishing:
+  enabled: false
+  backend: nextpolish2
+  min_contig_length: 10000
+  on_missing_wgs: skip
+  threads: 8
+  mem_mb: 64000
+assessment:
+  busco: false
+  kmer: false
+  read_mapping: false
+  busco_lineage: null
+  threads: 8
+  mem_mb: 64000
+  min_qv: 60
+  min_busco_complete: 95
+  terminal_window: 10000
+  terminal_max_distance: 1000
+  terminal_min_repeats: 10

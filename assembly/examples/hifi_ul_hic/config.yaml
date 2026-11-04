@@ -1,0 +1,21 @@
+schema_version: 1
+samples_table: samples.tsv
+readsets_table: readsets.tsv
+defaults:
+  assembly:
+    mode: hifi_ul_hic
+    representation: phased
+    threads: 32
+    mem_mb: 240000
+  scaffolding:
+    enabled: true
+    threads: 32
+    mem_mb: 128000
+    processes: 8
+    restriction_sites: GATC
+    enzyme_provenance: UNKNOWN_DEFAULT_replace_with_library_protocol
+    correct_nrounds: 0
+samples:
+  sample_A:
+    ploidy: 2
+    chromosomes_per_haplotype: 12

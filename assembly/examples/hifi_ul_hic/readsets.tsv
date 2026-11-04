@@ -1,0 +1,4 @@
+sample_id	readset_id	library_id	technology	format	file1	file2	md5_1	md5_2
+sample_A	hifi01	HIFI_LIB	hifi	bam	/absolute/path/to/data/hifi.bam			
+sample_A	ul01	UL_LIB	ont	fastq	/absolute/path/to/data/ul.fastq.gz			
+sample_A	hic01	HIC_LIB	hic	fastq	/absolute/path/to/data/hic_R1.fq.gz	/absolute/path/to/data/hic_R2.fq.gz		

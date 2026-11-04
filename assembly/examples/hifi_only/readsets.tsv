@@ -1,0 +1,4 @@
+sample_id	readset_id	library_id	technology	format	file1
+sample_A	cell01	library_A01	hifi	bam	../data/sample_A.cell01.bam
+sample_A	cell02	library_A02	hifi	fastq	../data/sample_A.cell02.fastq.gz
+sample_B	cell01	library_B01	hifi	fastq	../data/sample_B.cell01.fastq.gz

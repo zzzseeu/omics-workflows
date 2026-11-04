@@ -1,0 +1,10 @@
+# Analysis outputs, runtime state and installed environments belong outside this repository.
+.snakemake/
+results/
+logs/
+benchmarks/
+reports/
+.mamba/
+.conda/
+__pycache__/
+*.pyc

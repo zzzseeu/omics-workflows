@@ -1,0 +1,7 @@
+{
+  "project": "https://github.com/zengxiaofei/HapHiC",
+  "commit": "74f1cb27d7753ce061ee673c0d62fdd44187060e",
+  "version": "1.0.7",
+  "installation": "official source pinned commit; unified micromamba prefix",
+  "optional_mkl": "not installed; upstream dense-matrix fallback enabled"
+}

@@ -1,0 +1,3 @@
+# Empty final TSV fields and unified-diff context lines contain meaningful whitespace.
+*.tsv whitespace=-blank-at-eol
+*.patch whitespace=-blank-at-eol
