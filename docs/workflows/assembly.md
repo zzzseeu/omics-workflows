@@ -1,6 +1,6 @@
 # Assembly：基因组组装
 
-公共调用与项目边界见 [快速开始](../quickstart.md)，环境见 [环境管理](../environment.md)。本页集中维护组装的输入、配置、方法、产物和验收边界。
+公共调用方式与项目边界见 [快速开始](../quickstart.md)，环境准备见 [环境管理](../environment.md)。本手册说明组装的输入、配置、方法、产物和验收边界。
 
 ## 1. 能力与交付层级
 
@@ -11,9 +11,9 @@
 | `hifi_ul_hic` | `phased` | HiFi、ONT UL、Hi-C | 同上，并在组装中使用 UL 数据 |
 | `hifi_ul_hic` | `unitigs`，backend=`gphase` | HiFi、ONT UL、Hi-C，明确 ploidy=4 | 原始 unitig 图、拷贝数估计、四份染色体候选、AGP、重新比对的接触图与报告 |
 
-HiFi-only 可接受单/二倍体或未知倍性的初步组装；HapHiC 染色体路径必须显式提供 `ploidy: 2` 和每套染色体数。四倍体需要显式选择 GPhase/unitigs；其他已知多倍体或二/四倍体混合运行仍拒绝，不根据物种名推断核型。
+HiFi-only 可用于单倍体、二倍体或未知倍性材料的初步组装。HapHiC 染色体路径必须显式提供 `ploidy: 2` 和每套染色体数。四倍体需要显式选择 GPhase/unitigs；流程仍拒绝其他已知多倍体，以及二倍体与四倍体混合运行，不根据物种名推断核型。
 
-03 基因组特征仍未接入。07 补洞/端粒完善、08 NextPolish2 和 09 扩展验收通过显式 `--target t2t` 接入，见本页“染色体组装后的完善与验收”。独立相位、污染、复杂重复拷贝和最终 Hi-C 人工审阅仍需外部证据；不会自动认证 T2T。其他 mode 或 representation 即使出现在 schema 中，也须经过运行预检确认，不能据此推断已开放。
+03 基因组特征仍未接入。07 补洞/端粒完善、08 NextPolish2 和 09 扩展验收通过显式 `--target t2t` 接入，见本页“染色体组装后的完善与验收”。独立相位、污染、复杂重复拷贝和最终 Hi-C 人工审阅仍需外部证据，流程不会自动认证 T2T。其他 mode 或 representation 即使出现在 schema 中，也须经过运行预检确认，不能据此推断已开放。
 
 ## 2. 输入文件与样本表
 
@@ -45,15 +45,17 @@ ID 使用 ASCII 字母、数字、下划线、点或短横线，首字符为字�
 
 在 readsets.tsv 保留原始 `file1`、`format` 和 MD5，另填 `prepared_manifest`。路径与 file1 一样相对于 TSV，或使用绝对路径。YAML 顶层必须指定 `prepared_input_cache: /project/results/assembly_inputs/prepared_reuse_cache`，缓存必须在新 run-dir 和流程仓库之外，不写入旧运行。
 
-预检只读取小清单、QC 和文件签名，核对 sample/readset/library/technology、源路径及原始签名、交付 MD5 和无损转换策略。缺少准备 FASTQ、未完成 PASS QC、样本不符或来源不符时明确报错，不静默回退到重新转换。旧布局或其他软件的清单不能仅凭文件名复用。
+预检只读取小型清单、QC 和文件签名，核对 sample/readset/library/technology、源路径及原始签名、交付 MD5 和无损转换策略。缺少准备好的 FASTQ、未完成 PASS QC、样本不符或来源不符时，流程会报错，不会自动退回重新转换。旧布局或其他软件的清单不能仅凭文件名复用。
 
-首次使用旧版清单时，没有转换后 FASTQ 的历史 SHA256，因此在计算节点单次流式读取压缩文件：同时计算 SHA256、由 seqkit 解析 FASTQ 并核对原 QC 的 read/base 数量。该校验为现存准备文件建立来源缓存，不声称重新对 BAM 逐读段比对。新准备清单记录 FASTQ SHA256 和签名；若签名仍匹配，可直接使用生产者哈希，否则首次复用需要流式复核哈希。Snakemake 正常触碰输出时间戳也由该分支处理。
+旧版清单没有记录转换后 FASTQ 的历史 SHA256，首次使用时需在计算节点流式读取一次压缩文件，同时计算 SHA256、用 seqkit 解析 FASTQ，并与原 QC 核对 read/base 数量。这一步为现存准备文件建立来源缓存，没有重新与 BAM 逐读段比对。
 
-缓存按来源身份、旧清单/QC 哈希和准备文件路径寻址；文件锁避免并发消费者重复校验。命中后只核对小清单和 size/mtime/ctime/inode，不重复全文件读取。已缓存文件的签名变化会阻断，不能自动建立新的“正确”基线。删除缓存后可重新做只读校验，但仍不需要重新转换或复制。
+新准备清单记录 FASTQ SHA256 和签名。签名仍匹配时，可直接使用生产者记录的哈希；否则首次复用需要流式复核哈希。Snakemake 正常更新输出时间戳的情况也按这一分支处理。
+
+缓存按来源身份、旧清单/QC 哈希和准备文件路径查找，文件锁可避免并发使用时重复校验。命中缓存后只核对小型清单和 size/mtime/ctime/inode，不再读取整个文件。已缓存文件的签名变化会阻断运行，不能自动将变化后的文件作为正确基线。删除缓存后可重新做只读校验，无需重新转换或复制。
 
 新 `01_inputs/*.fastq.gz` 是指向旧准备文件的软链接，JSON 保留原始源哈希和准备 FASTQ 哈希，两者分开记录。新 02 复用原 PASS seqkit 统计并更新展示路径，不重新解析同一文件；T2T-only 目标本身也不会额外执行 02。没有 prepared_manifest 的普通输入继续使用原有准备/QC 路线。
 
-必须保留被引用的旧 FASTQ、准备清单和 QC；原始源签名也必须可检查。移动或清理旧运行前应明确管理这些引用。软链接不会使旧数据变为可删除缓存。输入复用与版本变化后对新组装的 HiFi/ONT 比对是两件事，07–09 仍会运行针对其对应 FASTA 的必要比对。
+必须保留被引用的旧 FASTQ、准备清单和 QC，原始源签名也必须可检查。移动或清理旧运行前，先核对并管理这些引用；建立软链接后，旧数据仍不能作为缓存删除。复用输入后，07 至 09 仍需针对对应版本的组装 FASTA 运行必要的 HiFi/ONT 比对。
 
 ## 3. 配置与模式选择
 
@@ -68,7 +70,7 @@ ID 使用 ASCII 字母、数字、下划线、点或短横线，首字符为字�
 | `assembly.mode`、`representation` | 按上面的能力表选择 |
 | `assembly.threads`、`mem_mb` | 单样本组装预算；不得超整份任务预算 |
 | `assembly.bloom_filter_bits` | hifiasm 的 -f；默认 37，不能直接套用测试中的 0 |
-| `assembly.purge_level` | null 使用后端默认；0—3 显式设置 -l |
+| `assembly.purge_level` | null 使用后端默认；0 至 3 显式设置 -l |
 | `ploidy`、`chromosomes_per_haplotype` | 倍性与每套目标染色体数，按材料填写 |
 | `genome_size_bp` | 规模元数据，不据此强行截断或删减组装 |
 | `scaffolding.enabled` | HiFi-only 为 false，两个 phased 路径为 true |
@@ -81,7 +83,7 @@ ID 使用 ASCII 字母、数字、下划线、点或短横线，首字符为字�
 | `scaffolding.gap_size`、`plot_bin_kb` | 连接 N 长度及接触图分箱 |
 | `scaffolding.review_agp`、`review_manifest` | 成对提供已审阅修改，见第 7 节 |
 
-未知参数会报错。染色体路径额外要求至少 4 核和 32,000 MB 总预算，每一步的声明预算也必须满足；这些下限不是实际基因组资源保证。Bloom bits=37 自身约占 17.2 GB，入口会检查明显不合理的内存组合。
+未知参数会报错。染色体路径额外要求至少 4 核和 32,000 MB 总预算，每一步声明的预算也必须满足。达到这些下限后，实际基因组分析仍可能需要更多资源。Bloom bits=37 自身约占 17.2 GB，入口会检查明显不合理的内存组合。
 
 ## 4. 运行目标
 
@@ -91,7 +93,7 @@ ID 使用 ASCII 字母、数字、下划线、点或短横线，首字符为字�
 |---|---|
 | `contigs` | 组装与索引，不生成评估/报告或开展挂载 |
 | `chromosomes` | 仅适用于所有选中样本均启用挂载的任务；包括交付、接触图和样本报告 |
-| `t2t` | 显式启用 07–09 完善/筛查和独立后处理报告；可接续外部已完成交付，不自动认证 T2T |
+| `t2t` | 显式启用 07 至 09 完善/筛查和独立后处理报告；可接续外部已完成交付，不自动认证 T2T |
 | `report`（默认） | 各样本对应路线的结果与报告，另加批次汇总 |
 
 联合路线使用 hifiasm 的 --h1/--h2，UL 模式另加 --ul；此时不使用 --primary。输出 hap1/hap2 是 Hi-C 辅助分相标签，不代表父母本身份或已验证的全局相位。
@@ -117,21 +119,21 @@ defaults:
     correct_nrounds: 0
 ```
 
-这是方法片段，实际配置仍需完整的 schema_version、样本/数据表及与外层任务匹配的内存设置。ploidy=4、每份 12 条时，目标是四份共 48 条；1C 大小只是来源元数据，不据此截断每份组装。GPhase 的 copy 标签仅在染色体组内有效，不表示父母本，也不直接表示 C/D/K/L 亚基因组身份。
+实际配置除上述方法设置外，还需完整的 schema_version、样本/数据表及与外层任务匹配的内存设置。ploidy=4、每份 12 条时，目标是四份共 48 条；1C 大小仅作为来源元数据，不用于截断每份组装。GPhase 的 copy 标签仅在染色体组内有效，不表示父母本，也不直接表示 C/D/K/L 亚基因组身份。
 
 路线为：原始输入验证 → HiFi/UL 全量 QC 和跨 readset ID 唯一性检查 → 未经改名、过滤、purge 或 polishing 的 p_utg 图 → HiFi/minimap2/popCNV 拷贝数估计 → 按物理 Hi-C 文库 BWA/samblaster 比对并保留 MAPQ0 → GPhase 图辅助分相及挂载 → unitig 和 contig 两种表示的 AGP/FASTA 一致性校验 → 四份染色体候选 → Hi-C 重新比对到 GPhase 最终 contig components 后绘图 → 评估与报告。初次聚类使用 GPhase 默认 MAPQ≥1，scaffolding 使用 MAPQ≥0；接触图使用成对 MAPQ/NM 过滤。
 
 GPhase 要求原始 p_utg 图，不能将二倍体 hap1/hap2 contig 简单扩成四份。其图闭合与 collapsed unitig 复制属于算法结果；导出会验证复制序列与原始 unitig 相同、AGP 坐标及同一副本区间不重叠，并核对原生 FASTA。图重叠允许被裁剪，不能套用 contig 路线的“每个原始碱基恰好一次”声明；未分配原始 unitig 保留在 unplaced.fa，可能包含图冗余。
 
-每个 chr×copy 组必须恰有一条 scaffold；缺组、多条或未分类对象会标记 INCOMPLETE_SCAFFOLDING，保留产物和接触图并阻断最终成功，不挑最大 scaffold 凑 48 条。四份 FASTA 和索引位于同一 delivery/ 下的 hap1–hap4.chromosomes.fa；components.fa、unitig_components.fa、两类 AGP 及 contig_to_unitig.txt 保留图来源。
+每个 chr×copy 组必须恰有一条 scaffold。缺组、多条或存在未分类对象时，流程标记 INCOMPLETE_SCAFFOLDING，保留产物和接触图并阻断最终成功，不通过挑选最大 scaffold 凑 48 条。四份 FASTA 和索引位于同一 delivery/ 下的 hap1–hap4.chromosomes.fa；components.fa、unitig_components.fa、两类 AGP 及 contig_to_unitig.txt 保留图来源。
 
-该路线目前要求无空白字符的 run-dir、gap_size=100、purge_level 为 0/null；使用 GPhase/YaHS 原生校正，不能设置 HapHiC 的 correct_nrounds。四倍体人工审阅结果回导尚未接入，提供 review_agp/review_manifest 会明确报错。后续可进入 07–09 完善和筛查；染色体组内四份标签仍不代表父母本或亚基因组身份，候选不自动成为 T2T。
+该路线目前要求 run-dir 不含空白字符、gap_size=100、purge_level 为 0/null。它使用 GPhase/YaHS 原生校正，不能设置 HapHiC 的 correct_nrounds。四倍体人工审阅结果回导尚未接入，提供 review_agp/review_manifest 会明确报错。后续可进入 07 至 09 完善和筛查，但染色体组内四份标签仍不代表父母本或亚基因组身份，候选也不会自动成为 T2T。
 
 算法依据：[GPhase 官方方法和输入要求](https://github.com/panlab-bioinfo/GPhase)。
 
 ## 5. 步骤与输出
 
-源码按业务阶段组织，`Snakefile` 负责组装依赖和选择目标。同一步骤的多个规则放在同一个文件内：
+源码按业务阶段组织，`Snakefile` 负责定义依赖和选择目标。同一步骤的多个规则放在同一个文件内：
 
 | 规则文件 | 处理内容 | 调用的专用脚本（位于 scripts/） |
 |---|---|---|
@@ -214,7 +216,9 @@ COMPLETED 表示选定计算目标成功。判断交付还应查看样本 manife
 
 Hi-C 使用 bwa mem -5SP、samblaster、-F3340 和 HapHiC 成对过滤，保留 query 相邻顺序，不做坐标排序。HapHiC 接收两套 GFA，phasing_weight=1，目标组数为两倍的 chromosomes_per_haplotype；所有未挂载序列保留。
 
-当两个单倍型很相似时，合并参考可能使大量读段在两套上等分匹配、MAPQ=0。这时先检查比对得分、替代位置和组装覆盖信息，再显式设置 `scaffolding.hic_reference: per_haplotype`。流程会对每套保留原 MAPQ/NM 标准，以每套染色体数分别运行原生 HapHiC，保留两套原生输出并汇总 AGP/FASTA。BAM 汇总按序列名重建参考和 mate 字典，不直接拼接不同参考字典。统计单位为参考内的读对观察，同一物理分子可能贡献两套观察；汇总保留率以输入读对数乘参考数为分母。跨单倍型联系缺失是构造结果，不能用作分相正确的证据；结构变异区须结合原始图、读段和接触图审阅。该替代路线见 [HapHiC 作者的说明](https://github.com/zengxiaofei/HapHiC/issues/98)。映射或挂载失败时保留 `failed_attempts/` 中的原生工作目录和日志，成功后仅发布校验产物。
+当两个单倍型很相似时，合并参考可能使大量读段在两套上匹配得分相同、MAPQ=0。这时先检查比对得分、替代位置和组装覆盖信息，再显式设置 `scaffolding.hic_reference: per_haplotype`。流程对每套保留原 MAPQ/NM 标准，以每套染色体数分别运行原生 HapHiC，保留两套原生输出并汇总 AGP/FASTA。BAM 汇总时按序列名重建参考和 mate 字典，不直接拼接不同参考字典。
+
+统计单位是参考内的读对观察，同一物理分子可能贡献两套观察；汇总保留率以输入读对数乘参考数为分母。跨单倍型联系缺失是这一构造的结果，不能用作分相正确的证据。结构变异区须结合原始图、读段和接触图审阅。该替代路线见 [HapHiC 作者的说明](https://github.com/zengxiaofei/HapHiC/issues/98)。映射或挂载失败时，流程会在 `failed_attempts/` 中保留原生工作目录和日志，成功后仅发布通过校验的产物。
 
 先查看 `06_scaffolding/contact_maps/` 的全局和逐染色体接触图，再结合原始 GFA/AGP 检查连接、方向和 hap 混合。若使用 Juicebox，可在项目计算任务中运行 HapHiC 保留的 `04.build/juicebox.sh` 生成交互材料；默认交付静态接触图。
 
@@ -256,15 +260,15 @@ defaults:
 
 完整调用使用 `run assembly --config ... --run-dir ... --cores 16 --mem-mb 256000 --target t2t --env-prefix ...`。单个外层任务中的 local Snakemake 执行模型不变。`--target chromosomes` 仍止于 06，`--target report` 在新建完整分析中包含已启用的完善模块。
 
-**接续冻结的旧组装**：复制原配置至项目新配置目录，开启上述模块，将 `finishing.source_delivery` 设为旧运行 `06_scaffolding/delivery/manifest.json` 的绝对路径；另用新 run-dir，先 `--target t2t --dry-run`。07 校验交付清单、每份 FASTA 的 SHA256、拷贝间序列一致性和目标数量，然后直接使用旧 06；不会调用旧 04–06。不要将正在写入的旧产物当成已完成输入，也不要直接修改旧快照。源样本和交付不一致、哈希改变或 INCOMPLETE_SCAFFOLDING 会阻断。
+接续冻结的旧组装时，复制原配置至项目新配置目录，开启上述模块，将 `finishing.source_delivery` 设为旧运行 `06_scaffolding/delivery/manifest.json` 的绝对路径；另用新 run-dir，先 `--target t2t --dry-run`。07 校验交付清单、每份 FASTA 的 SHA256、拷贝间序列一致性和目标数量，然后直接使用旧 06 交付，不会调用旧 04 至 06。不要将正在写入的旧产物当成已完成输入，也不要直接修改旧快照。源样本和交付不一致、哈希改变或 INCOMPLETE_SCAFFOLDING 会阻断。
 
 07 逐位点执行以下操作：
 
-1. 对全部染色体拷贝和未挂载序列联合进行竞争比对，仅选取主比对、MAPQ≥30 的局部 HiFi/ONT 读段。
+1. 将读段与全部染色体拷贝和未挂载序列联合竞争比对，仅选取主比对、MAPQ≥30 的局部 HiFi/ONT 读段。
 2. 用 hifiasm 对该位点局部组装；HiFi 种子不足默认 3 条时保留未解决状态。
 3. 内部缺口要求两侧默认各 2 kb 锚定均唯一、方向一致、比对一致性≥99%。端粒延伸要求唯一末端锚定及延伸序列含近末端端粒阵列。
 4. 将原始读段重比对至完整候选桥接序列，默认至少 3 个不同读段 ID 覆盖整个替换段及两侧锚定；大删除不算跨越证据。quarTeT 仅对通过证据筛查的单拷贝单缺口草图执行 fill，禁用 join。
-5. 保存 accepted/rejected 原因、候选、局部图、比对和支持读段；不能解决的缺口不删除 N 来凑 gap-free。
+5. 保存 accepted/rejected 原因、候选、局部图、比对和支持读段。无法解决的缺口保留 N，不能通过删除 N 得到 gap-free 结果。
 
 这些阈值是保守筛查，不能独立证明多倍体相位。短于最小锚定、长于 `max_span`（默认 1 Mb）、无 HiFi 局部种子、重复路径歧义或缺少全跨越读段的位点保持未解决。hifiasm 局部路径无法覆盖的端粒不做任意重复延伸。`edits.tsv` 使用 0-based、右端不包含坐标，记录从 06 到 07 的替换；07 后原始 AGP 不再代表修改后的序列，不冒用旧 AGP。
 
@@ -276,7 +280,9 @@ defaults:
 
 ## 8. 恢复与排错
 
-同一方案沿用配置、样本选择和 run-dir；入口自动启用 rerun-incomplete。新方案用新目录。变更参数、输入或相关代码可能使产物失效；保留原日志、manifest 和 `.snakemake`，检查对应编号阶段的日志。阶段参数分别记录相关源码指纹：仅修改接触图脚本不使输入准备、组装或比对失效；修改共享辅助函数会影响实际使用它的阶段。
+同一方案沿用配置、样本选择和 run-dir，入口自动启用 rerun-incomplete；新方案使用新目录。变更参数、输入或相关代码可能使产物失效，恢复时应保留原日志、manifest 和 `.snakemake`，并检查对应编号阶段的日志。
+
+各阶段的参数分别记录相关源码指纹。仅修改接触图脚本，不会使输入准备、组装或比对失效；修改共享辅助函数则会影响实际使用它的阶段。
 
 旧源码使用综合任务脚本，改用当前源码后规则与指纹已变化，不能保证旧运行目录完全无重算。正在执行的项目继续使用其冻结快照；迁移已完成或运行中的真实项目需单独检查 DAG，不能直接替换源码后恢复。
 
