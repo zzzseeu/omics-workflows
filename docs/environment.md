@@ -11,7 +11,7 @@
 | [versions.tsv](../env/versions.tsv) | 关键软件版本速查 |
 | [haphic.lock.json](../env/haphic.lock.json) | HapHiC 官方源码固定版本 |
 
-软件版本以这些文件为准。包锁不包含 Git 源码，完整恢复还需要源码锁；不要仅恢复 conda 包就认定 HapHiC 已安装。
+软件版本以这些文件为准。包锁不包含 Git 源码，完整恢复还需要源码锁；仅恢复 conda 包不足以完成 HapHiC 安装。
 
 T2T 完善的可选依赖另见 [t2t.lock.json](../env/t2t.lock.json)，不属于基础 conda 包锁。
 
@@ -21,7 +21,7 @@ T2T 完善的可选依赖另见 [t2t.lock.json](../env/t2t.lock.json)，不属�
 
 ## 创建与验证
 
-环境管理操作由项目自己的启动/计算任务调用。通用 [create.sh](../env/create.sh) 拒绝覆盖现有前缀，默认按精确包锁创建，并执行 [HapHiC 源码安装](../env/install_haphic.py) 和 [离线自检](../env/validate.py)：
+由项目自己的启动脚本或计算任务调用环境管理工具。[create.sh](../env/create.sh) 拒绝覆盖现有前缀，默认按精确包锁创建环境，再执行 [HapHiC 源码安装](../env/install_haphic.py) 和 [离线自检](../env/validate.py)：
 
 ```bash
 export MICROMAMBA_EXE=/path/to/micromamba
@@ -43,13 +43,13 @@ MICROMAMBA_EXE 未设置时从 PATH 查找。保留 ASSEMBLY_ENV_PREFIX 别名�
 
 ## 新流程增加依赖
 
-先检查已有工具，仅补充缺少的依赖。更新主定义、精确包锁、版本清单及所需源码锁，并回归既有流程；避免为新增模块直接降级已验证的基础依赖。保持一个统一环境，实际升级安排在当前分析不再依赖该环境运行时。
+先检查已有工具，只补充缺少的依赖。更新主定义、精确包锁、版本清单及所需源码锁，并对既有流程做回归验证，避免为新增模块直接降级已验证的基础依赖。所有流程继续共用一个环境，等当前分析不再使用该环境时再升级。
 
 环境安装成功、功能验收通过、真实样本质量合格是不同结论。历史安装和验收来源见 [维护档案](../../project/omics_workflows_maintenance/docs/README.md)。
 
 ## GPhase 四倍体扩展
 
-GPhase 与已运行的二倍体流程共用 `omics_workflows` 的同一个 Python，不创建第二个环境。为保持运行中任务的现有依赖，新增 Python 包放在该前缀的 `opt/GPhase/python/`，原始源码在 `opt/GPhase/source/`，新增原生工具在 `opt/GPhase/bin/`。仅四倍体入口设置这些附加搜索路径；既有 site-packages、conda history 和 linux-64 基础锁不替换。
+GPhase 与已运行的二倍体流程共用 `omics_workflows` 的同一个 Python，不另建环境。为保留运行中任务的现有依赖，新增 Python 包放在该前缀的 `opt/GPhase/python/`，原始源码放在 `opt/GPhase/source/`，新增原生工具放在 `opt/GPhase/bin/`。仅四倍体入口设置这些附加搜索路径，既有 site-packages、conda history 和 linux-64 基础锁保持不变。
 
 - [gphase.lock.json](../env/gphase.lock.json)：上游 commit、源码逐文件指纹、附加包版本、mosdepth/YaHS 来源与二进制指纹。
 - [gphase.requirements.txt](../env/gphase.requirements.txt)：附加 Python 包的固定版本。
@@ -57,14 +57,16 @@ GPhase 与已运行的二倍体流程共用 `omics_workflows` 的同一个 Pytho
 
 当前锁定 GPhase `a9221035274e7397fc05dc5be693270c2758528c`、YaHS 1.2.2（`9b2cc15740f03e84dffe248fab04445c994f17ab`）、mosdepth 0.3.11。statsmodels 使用 0.15.0 以兼容现有 pandas；不降低公用 pandas/NumPy 版本。popCNV GUI 和 Pore-C/PPL 不用于本路线。
 
-新部署需要在计算任务中完成：按锁文件取 GPhase 源码、应用预算补丁；安装附加包；按固定 commit 编译 YaHS、校验 mosdepth 二进制；建立指向该前缀内部的 gphase/mosdepth/yahs 入口；生成安装位置对应的 `opt/GPhase/SOURCE_LOCK.json`。入口检查源码指纹。仅安装后能显示 help 不足以认定可运行，还需执行完整作者案例及本仓库四拷贝、拷贝数、比对、交付和绘图测试。
+新部署须在计算任务中完成以下操作：按锁文件获取 GPhase 源码并应用预算补丁，安装附加包，按固定 commit 编译 YaHS 并校验 mosdepth 二进制，建立指向该前缀内部的 gphase/mosdepth/yahs 入口，生成与安装位置对应的 `opt/GPhase/SOURCE_LOCK.json`。入口会检查源码指纹。
 
-screed 1.1.3 的旧构建元数据需要兼容的 setuptools。可在同一前缀的临时构建目录放置 setuptools 80.9.0、setuptools-scm 8.3.1、wheel 0.45.1，再以 `--no-build-isolation --no-deps --target .../opt/GPhase/python` 安装固定依赖；构建目录不加入分析运行时搜索路径。不要对正在使用的基础环境进行整体升级。本文是扩展部署约定，现有锁文件与项目中的实际验证记录是来源证据。
+安装后还需执行完整作者案例及本仓库四拷贝、拷贝数、比对、交付和绘图测试。能显示 help 只能确认入口可启动。
+
+screed 1.1.3 的旧构建元数据需要兼容的 setuptools。可在同一前缀的临时构建目录放置 setuptools 80.9.0、setuptools-scm 8.3.1、wheel 0.45.1，再以 `--no-build-isolation --no-deps --target .../opt/GPhase/python` 安装固定依赖；构建目录不加入分析运行时搜索路径。不要整体升级正在使用的基础环境。部署来源以现有锁文件和项目中的实际验证记录为准。
 
 
 ## T2T 完善工具
 
-07–09 的选定工具共用同一个 `omics_workflows` 前缀，附加目录为 `opt/T2T/`；不升级基础 conda 包，不修改现有 conda history。固定来源和逐文件指纹见 [t2t.lock.json](../env/t2t.lock.json)，安装器为 [install_t2t.py](../env/install_t2t.py)。
+07 至 09 使用的工具共用同一个 `omics_workflows` 前缀，附加目录为 `opt/T2T/`；基础 conda 包和现有 conda history 保持不变。固定来源和逐文件指纹见 [t2t.lock.json](../env/t2t.lock.json)，安装器为 [install_t2t.py](../env/install_t2t.py)。
 
 | 工具 | 固定来源 | 用途 |
 |---|---|---|
@@ -87,4 +89,4 @@ Inspector 的附加 statsmodels 0.15.0/patsy 1.0.2 安装在 `opt/T2T/python/`�
 
 安装器拒绝覆盖已锁定的扩展。新位置需重新安装，不能直接复制包含绝对包装器路径的前缀。安装不等于功能验收；测试入口为 `tests/assembly/t2t_integration.py`，需使用仓库外输出。已有真实作业继续用冻结源码，不自动启用新模块。
 
-BUSCO 需要项目明确提供适合物种的离线 lineage 目录；预检要求 dataset.cfg，规则使用 `--offline`，不隐藏下载数据库。NextPolish2 的官方许可限学术和非商业使用。未提供普通 WGS 的流程显式记录纠错和 Merqury 的缺失状态，不将 Hi-C 当作普通 WGS。
+BUSCO 需要项目明确提供适合物种的离线 lineage 目录，预检要求其中包含 dataset.cfg。规则使用 `--offline`，不会隐式下载数据库。NextPolish2 的官方许可限学术和非商业使用。未提供普通 WGS 时，流程会明确记录纠错和 Merqury 的缺失状态，不能用 Hi-C 代替普通 WGS。
