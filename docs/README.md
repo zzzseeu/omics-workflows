@@ -5,7 +5,9 @@
 | 你要做什么 | 阅读文档 |
 |---|---|
 | 第一次使用，理解项目如何调用接口 | [快速开始](quickstart.md) |
+| 第一次准备组装配置、提交任务并查看结果 | [单样本 HiFi 组装教程](workflows/assembly-first-run.md) |
 | 配置组装、选择模式、查找产物、恢复或审阅 | [Assembly 手册](workflows/assembly.md) |
+| 四倍体组装、复用已准备读段、补洞纠错或导入审阅结果 | [Assembly 进阶操作](workflows/assembly-advanced.md) |
 | 使用、安装或维护统一 micromamba 环境 | [环境管理](environment.md) |
 | 新增流程、修改代码、验证或迁移旧结果 | [开发与维护](development.md) |
 
@@ -21,7 +23,7 @@
 
 - 仓库 README：介绍用途、源码结构和统一入口，链接到本导航。
 - 公共文档：维护接口使用、仓库与项目边界、环境和开发约定。
-- `workflows/`：每个已接入流程一份手册，新增流程时在此添加文件。
+- `workflows/`：每个已接入流程维护一份使用手册，复杂的进阶操作可另页说明，由主手册链接。
 - 配置模板和可运行示例：放在各流程的代码目录，由手册链接，整套模板只维护一份。
 - 真实样本、作业状态和运行结果：归具体项目记录。
 - 旧设计、MVP、文献调研和历史验收说明：归维护项目的历史档案，见 [历史文档索引](../../project/omics_workflows_maintenance/docs/README.md)。
