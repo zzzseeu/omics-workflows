@@ -1,3 +1,4 @@
+# Historical baseline only; the seven-stage workflow requires env/environment.yaml.
 # This file may be used to create an environment using:
 # $ conda create --name <env> --file <this file>
 # platform: linux-64

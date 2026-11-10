@@ -4,14 +4,22 @@ genome_size_bp: null
 chromosomes_per_haplotype: null
 assembly:
   backend: hifiasm
+  strategy: null
   mode: hifi_only
   representation: primary_alternate
   threads: 8
   mem_mb: 64000
   bloom_filter_bits: 37
   purge_level: null
-genome_profile:
-  enabled: false
+read_qc:
+  threads: 8
+  mem_mb: 8000
+  ont_min_length: 1000
+  ont_min_quality: 7
+  fastp_min_length: 15
+  fastp_quality: 15
+  hifi_adapter_length: 44
+  hifi_adapter_identity: 97
 scaffolding:
   enabled: false
   backend: haphic
@@ -51,6 +59,9 @@ polishing:
   threads: 8
   mem_mb: 64000
 assessment:
+  enabled: true
+  # Legacy flags/thresholds only; chromosome assessment always runs seven categories
+  # and does not use min_qv/min_busco_complete to assign a quality verdict.
   busco: false
   kmer: false
   read_mapping: false
@@ -62,3 +73,9 @@ assessment:
   terminal_window: 10000
   terminal_max_distance: 1000
   terminal_min_repeats: 10
+  kmer_size: 21
+  min_mapq: 1
+  coverage_window: 10000
+  quast_min_contig: 1
+  telomere_min_length: 200
+  keep_intermediates: false

@@ -28,7 +28,7 @@ project/
 
 ## 3. 准备项目配置
 
-按所选流程的手册，将模板复制到项目并填写真实输入。Assembly 的完整模板见 [模块示例目录](../assembly/examples/README.md)，参数定义见 [Assembly 手册](workflows/assembly.md)。
+按所选流程的手册，将模板复制到项目并填写真实输入。Assembly 的完整模板见 [模块示例目录](../assembly/examples/)，参数定义见 [Assembly 手册](workflows/assembly.md)。
 
 先做只读元数据预检，再查看 DAG：
 

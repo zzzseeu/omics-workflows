@@ -5,13 +5,39 @@ import tempfile
 from types import SimpleNamespace
 import unittest
 import yaml
-import test_config as fixtures
+from tests.assembly import test_config as fixtures
 
 ROOT=Path(__file__).resolve().parents[2]
-sys.path.insert(0,str(ROOT/'assembly/scripts'))
-from export_polyploid_fasta import export
-from io_utils import checksum, load, publish, save
-from scaffold_polyploid_gphase import relocate_internal_links
+sys.path.insert(0,str(ROOT))
+from assembly.lib.scaffolding import export_polyploid as export
+from assembly.lib.io import checksum, load, publish, save
+from assembly.lib.assembly import relocate_internal_links
+from assembly.lib.assembly import mapping_commands
+
+
+class CopyNumberInputTests(unittest.TestCase):
+    def test_multiple_hifi_readsets_form_one_unpaired_stream(self):
+        import gzip
+        import subprocess
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first, second = root/'cell1.fq', root/'cell2.fq.gz'
+            a, b = '@a\nACGT\n+\nIIII\n', '@b\nTTAA\n+\nIIII\n'
+            first.write_text(a)
+            with gzip.open(second, 'wt') as handle:
+                handle.write(b)
+            commands = mapping_commands(root/'unitigs.fa', [first, second], root/'reads.bam', 8)
+            streamed = subprocess.run(list(map(str, commands[0])), check=True, capture_output=True).stdout
+            self.assertEqual(streamed.decode(), a+b)
+            self.assertEqual(commands[1][-1], '-')
+            self.assertNotIn(first, commands[1])
+            self.assertNotIn(second, commands[1])
+
+    def test_one_hifi_readset_is_mapped_directly(self):
+        path = Path('/tmp/one-cell.fq')
+        commands = mapping_commands('/tmp/unitigs.fa', [path], '/tmp/reads.bam', 8)
+        self.assertEqual(len(commands), 2)
+        self.assertEqual(commands[0][-1], path)
 
 
 class PublicationTests(unittest.TestCase):

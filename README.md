@@ -7,8 +7,8 @@ omics-workflows 提供可复用的组学分析流程和统一调用接口。实�
 ```text
 omics-workflows/
 ├── run          # 统一入口
-├── assembly/    # 组装模块：规则、分析脚本、配置与示例
-├── common/      # 运行管理
+├── assembly/    # 组装模块：启动器、规则、分析脚本、配置与示例
+├── common/      # 通用配置检查、来源记录与任务运行
 ├── env/         # 统一环境定义、包锁和源码锁
 ├── tests/
 └── docs/        # 公共说明与各流程手册
