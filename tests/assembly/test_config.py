@@ -1,15 +1,12 @@
 """Contract failures that must be caught before starting compute rules."""
 import copy
-import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-spec = importlib.util.spec_from_file_location('assembly_config', ROOT / 'assembly/configuration.py')
-module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(module)
+from assembly import runner as module
 
 
 class ConfigTests(unittest.TestCase):
@@ -36,6 +33,32 @@ class ConfigTests(unittest.TestCase):
         result = self.resolve()
         self.assertEqual(result['sample_order'], ['A'])
         self.assertIsNone(result['samples']['A']['settings']['ploidy'])
+
+    def test_genome_profiling_is_not_an_assembly_stage(self):
+        self.assertNotIn('genome_profile', self.resolve()['samples']['A']['settings'])
+
+    def test_old_disabled_profiling_placeholder_preserves_settings(self):
+        baseline = self.resolve()['samples']['A']['settings']
+        for scope in ('defaults', 'analysis_profiles', 'samples'):
+            with self.subTest(scope=scope):
+                config = copy.deepcopy(self.config)
+                if scope == 'defaults':
+                    config['defaults']['genome_profile'] = {'enabled': False}
+                elif scope == 'samples':
+                    config['samples'] = {'A': {'genome_profile': {'enabled': False}}}
+                else:
+                    config['analysis_profiles'] = {'unused': {'genome_profile': {'enabled': False}}}
+                self.assertEqual(self.resolve(config)['samples']['A']['settings'], baseline)
+                self.assertIn('genome_profile', config[scope] if scope == 'defaults' else
+                              next(iter(config[scope].values())))
+
+    def test_enabled_or_malformed_profiling_is_not_silently_ignored(self):
+        for value in ({'enabled': True}, {'enabled': False, 'enabeld': False}, {'enabled': 0}, None):
+            with self.subTest(value=value):
+                config = copy.deepcopy(self.config)
+                config['defaults']['genome_profile'] = value
+                with self.assertRaisesRegex(module.ConfigError, 'outside the assembly workflow'):
+                    self.resolve(config)
 
     def test_missing_selected_input(self):
         with self.assertRaisesRegex(module.ConfigError, 'missing or empty'):

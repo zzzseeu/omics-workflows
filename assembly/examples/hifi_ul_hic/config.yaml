@@ -7,6 +7,7 @@ defaults:
     representation: phased
     threads: 32
     mem_mb: 240000
+    strategy: diploid
   scaffolding:
     enabled: true
     threads: 32
@@ -15,6 +16,10 @@ defaults:
     restriction_sites: GATC
     enzyme_provenance: UNKNOWN_DEFAULT_replace_with_library_protocol
     correct_nrounds: 0
+  finishing:
+    telomere_motif: TTTAGGG
+  assessment:
+    busco_lineage: /absolute/path/to/appropriate_lineage
 samples:
   sample_A:
     ploidy: 2

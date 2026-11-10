@@ -1,44 +1,44 @@
 name: omics_workflows
 channels:
-  - https://conda.anaconda.org/conda-forge
-  - https://conda.anaconda.org/bioconda
+- https://conda.anaconda.org/conda-forge
+- https://conda.anaconda.org/bioconda
 dependencies:
-  - python=3.12
-  - pip
-  - snakemake-minimal>=9,<10
-  - snakemake-executor-plugin-cluster-generic
-  - hifiasm>=0.25,<1
-  - samtools>=1.22
-  - seqkit
-  - pigz
-  - gfatools
-  - minimap2
-  - yak
-  - fastp
-  - busco>=6,<7
-  - quast>=5,<6
-  - meryl>=1.4.1
-  - merqury>=1.4.1
-  - multiqc
-  - pyyaml
-  - jsonschema
-  - bwa
-  - samblaster
-  - scipy
-  - pysam
-  - scikit-learn
-  - portion
-  - sortedcontainers
-  # HapHiC is installed from a pinned upstream source commit in the same prefix.
-  # See env/install_haphic.py and env/haphic.lock.json.
-  # Optional GPhase uses this same interpreter, with extra-only packages in
-  # PREFIX/opt/GPhase/python. Source, native binaries and Python versions are
-  # recorded in env/gphase.lock.json; see docs/environment.md before enabling it.
-  # Optional post-assembly tools use env/install_t2t.py and env/t2t.lock.json,
-  # additively under PREFIX/opt/T2T. They do not change this base conda solve.
-  # Explicit Python metadata requirements missing from current package recipes.
-  - boto3
-  - pyarrow
-  # 1.23.1 requires packaging>=26.1, conflicting with Snakemake 9.27.1 (<26).
-  - snakemake-interface-common=1.23.0
-  - packaging>=24,<26
+- python=3.12
+- pip
+- snakemake-minimal>=9,<10
+- snakemake-executor-plugin-cluster-generic
+- hifiasm>=0.25,<1
+- samtools>=1.22
+- seqkit
+- pigz
+- gfatools
+- minimap2
+- yak
+- fastp
+- busco>=6,<7
+- quast>=5,<6
+- meryl>=1.4.1
+- merqury>=1.4.1
+- multiqc
+- pyyaml
+- jsonschema
+- bwa
+- samblaster
+- scipy
+- pysam
+- scikit-learn
+- portion
+- sortedcontainers
+- boto3
+- pyarrow
+- snakemake-interface-common=1.23.0
+- packaging>=24,<26
+- nanoplot>=1.44,<2
+- nanofilt=2.8
+- hifiadapterfilt=3.0.0
+- mosdepth>=0.3
+- tidk=0.3.1
+- genometools-genometools>=1.6
+- ltr_finder_parallel>=1.2
+- ltr_retriever>=3,<4
+- pylint=3.3.8

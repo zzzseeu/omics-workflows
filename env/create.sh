@@ -12,9 +12,8 @@ if [[ -z "$DEPLOYMENT_DIR" ]]; then
     DEPLOYMENT_DIR="$RESOURCE_ROOT/deployments/assembly_$(date -u +%Y%m%dT%H%M%SZ)"
 fi
 DEFAULT_SPEC="$REPO_ROOT/env/environment.yaml"
-if [[ -s "$REPO_ROOT/env/linux-64.lock" ]]; then
-    DEFAULT_SPEC="$REPO_ROOT/env/linux-64.lock"
-fi
+# linux-64.lock records the historical environment; use the complete seven-stage
+# dependency specification unless a newly resolved explicit lock is supplied.
 ENV_SPEC=${ASSEMBLY_ENV_SPEC:-$DEFAULT_SPEC}
 mkdir -p "$DEPLOYMENT_DIR"
 if [[ -e "$ENV_PREFIX" ]]; then

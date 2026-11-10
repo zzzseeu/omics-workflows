@@ -1,0 +1,19 @@
+[MAIN]
+py-version=3.12
+init-hook=import sys; sys.path.insert(0, '.')
+extension-pkg-allow-list=pysam
+
+[FORMAT]
+max-line-length=110
+
+[BASIC]
+module-rgx=([a-z_][a-z0-9_]*|0[1-7]_[a-z][a-z0-9_]*)$
+good-names=i,j,k,n,p,f,s,r,h,a,b,c,q,t,w,db,rc,lo,hi,ul,sid,rid,md5,sha
+
+[DESIGN]
+max-nested-blocks=6
+
+[MESSAGES CONTROL]
+# These are orchestration/CLI adapters. Complexity and public-API documentation
+# are reviewed separately; correctness, imports, naming and formatting stay on.
+disable=missing-function-docstring,missing-class-docstring,too-many-locals,too-many-statements,too-many-branches,too-many-arguments,too-many-positional-arguments,too-many-return-statements,duplicate-code,import-outside-toplevel

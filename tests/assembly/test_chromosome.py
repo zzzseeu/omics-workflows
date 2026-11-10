@@ -8,10 +8,10 @@ from types import SimpleNamespace
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT/'assembly/scripts'))
-import agp_utils
-import io_utils
-from validate_hic_pairs import paired_input
+sys.path.insert(0, str(ROOT))
+from assembly.lib import sequences as agp_utils
+from assembly.lib import io as io_utils
+from assembly.lib.postassembly import fastq_statistics
 
 
 class AgpTests(unittest.TestCase):
@@ -62,23 +62,18 @@ class PairedTests(unittest.TestCase):
             a,b = root/'R1.fq',root/'R2.fq'
             a.write_text(first)
             b.write_text(second)
-            spec = {'file1':str(a),'file2':str(b),'source_signature':io_utils.signature(a),
-                    'source_signature_2':io_utils.signature(b), 'expected_md5':None,
-                    'expected_md5_2':None,'sample_id':'S','readset_id':'R','library_id':'L'}
-            io_utils.save(root/'spec.json',spec)
-            paired_input(SimpleNamespace(spec=root/'spec.json',out=root/'out.json'))
-            return io_utils.load(root/'out.json')
+            return fastq_statistics([a,b])
 
     def test_mate_suffixes_and_counts(self):
         result = self.check_pair('@r/1\nACGT\n+\nIIII\n', '@r/2\nTGCA\n+\nIIII\n')
         self.assertEqual(result['num_pairs'],1)
 
     def test_wrong_pair_ids_fail(self):
-        with self.assertRaisesRegex(ValueError,'IDs differ'):
+        with self.assertRaisesRegex(ValueError,'IDs/order differ'):
             self.check_pair('@r1\nACGT\n+\nIIII\n','@r2\nACGT\n+\nIIII\n')
 
     def test_missing_mate_fails(self):
-        with self.assertRaisesRegex(ValueError,'unequal'):
+        with self.assertRaisesRegex(ValueError,'counts differ'):
             self.check_pair('@r1\nACGT\n+\nIIII\n','')
 
 

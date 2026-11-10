@@ -10,10 +10,10 @@ import unittest
 from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parents[2]
-sys.path.insert(0,str(ROOT/'assembly/scripts'))
-from io_utils import checksum,save,signature
-from prepared_input_utils import describe_prepared_input
-from reuse_prepared_reads import attest,reuse
+sys.path.insert(0,str(ROOT))
+from assembly.lib.io import checksum, save, signature
+from assembly.lib.reads import describe_prepared_input
+from assembly.lib.reads import attest, reuse
 
 
 class PreparedReuseTests(unittest.TestCase):
@@ -69,7 +69,7 @@ class PreparedReuseTests(unittest.TestCase):
 
     def test_producer_hash_uses_metadata_only_cache(self):
         spec=self.producer()
-        with patch('reuse_prepared_reads.scan_legacy',side_effect=AssertionError('must not scan')):
+        with patch('assembly.lib.reads.scan_legacy',side_effect=AssertionError('must not scan')):
             first,hit,sha=attest(spec);self.assertFalse(hit)
             second,hit,sha=attest(spec);self.assertTrue(hit)
         self.assertEqual(first['prepared_sha256'],checksum(self.fastq));self.assertEqual(first,second)
@@ -77,7 +77,7 @@ class PreparedReuseTests(unittest.TestCase):
     def test_changed_prepared_file_is_not_silently_recertified(self):
         spec=self.producer();attest(spec)
         self.fastq.touch();changed={**self.spec,'prepared_reuse':self.descriptor()}
-        with patch('reuse_prepared_reads.scan_legacy',side_effect=AssertionError('must not rescan')):
+        with patch('assembly.lib.reads.scan_legacy',side_effect=AssertionError('must not rescan')):
             with self.assertRaisesRegex(ValueError,'Cached prepared FASTQ changed'):attest(changed)
 
     def test_link_does_not_copy_or_touch_original(self):
@@ -94,15 +94,20 @@ class PreparedReuseTests(unittest.TestCase):
         data=json.loads(p.read_text());data['identity']['sample_id']='wrong';save(p,data)
         with self.assertRaisesRegex(ValueError,'provenance is invalid'):attest(spec)
 
-    def test_qc_reuse_does_not_invoke_seqkit(self):
-        import check_read_quality
-        spec=self.producer();path=self.root/'spec.json';save(path,spec);out=self.root/'new/samples/A/01_inputs/r1.fastq.gz'
-        reuse(argparse.Namespace(spec=str(path),fastq=str(out),manifest=str(out.with_name('r1.json'))))
-        stats=self.root/'stats.tsv';qc=self.root/'qc.json'
-        argv=['check_read_quality','--fastq',str(out),'--prepared-manifest',str(out.with_name('r1.json')),
-              '--stats',str(stats),'--json',str(qc),'--seqkit','/must-not-run','--threads','2']
-        with patch.object(sys,'argv',argv):check_read_quality.main()
-        result=json.loads(qc.read_text());self.assertEqual(result['num_reads'],1);self.assertIn('reuse',result)
+    def test_stage_one_validates_reused_reads_without_seqkit(self):
+        import importlib
+        from types import SimpleNamespace
+        prepare = importlib.import_module("assembly.scripts.01_prepare_inputs").prepare_sample
+        spec=self.producer()
+        metadata=self.root/'metadata.json'
+        save(metadata, {'sample_id':'A','settings':{'assembly':{'strategy':'single'}},'readsets':{'r1':spec}})
+        output=self.root/'new/samples/A/01_inputs'
+        prepare(SimpleNamespace(metadata=metadata,out_dir=output,threads=1))
+        record=json.loads((output/'manifest.json').read_text())['readsets']['r1']
+        self.assertEqual(record['statistics']['num_reads'],1)
+        self.assertEqual(record['statistics']['num_bases'],8)
+        self.assertIn('reuse',record['sources'])
+        self.assertTrue((output/record['files'][0]['file']).is_symlink())
 
 
 if __name__=='__main__':unittest.main()

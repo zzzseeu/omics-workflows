@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location('layout_migration',
-                                            ROOT / 'assembly/migrate_layout.py')
+                                            ROOT / 'docs/legacy/assembly_migrate_layout.py')
 layout = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(layout)
 

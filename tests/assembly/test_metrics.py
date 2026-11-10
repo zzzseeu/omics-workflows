@@ -5,8 +5,8 @@ import sys
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / 'assembly/scripts'))
-import fasta_utils as tasks
+sys.path.insert(0, str(ROOT))
+from assembly.lib import sequences as tasks
 
 
 class MetricTests(unittest.TestCase):

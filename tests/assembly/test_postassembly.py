@@ -7,10 +7,10 @@ import tempfile
 import unittest
 
 ROOT=Path(__file__).resolve().parents[2]
-sys.path.insert(0,str(ROOT/'assembly/scripts'))
-from fasta_utils import fasta_statistics
-from io_utils import checksum
-from postassembly_utils import inspect_sequences, rebase_symlinks, supported_alignments, terminal_repeats, verify_delivery, write_sequences
+sys.path.insert(0,str(ROOT))
+from assembly.lib.sequences import fasta_statistics
+from assembly.lib.io import checksum
+from assembly.lib.postassembly import inspect_sequences, rebase_symlinks, supported_alignments, terminal_repeats, assembly_bundle, write_sequences
 
 
 class PostassemblyTests(unittest.TestCase):
@@ -37,13 +37,13 @@ class PostassemblyTests(unittest.TestCase):
             manifest={'sample_id':'S','quality_level':'CHROMOSOME_CANDIDATE',
                       'sets':{label:fasta_statistics(p/(label+'.fa')) for label in ['chromosomes','hap1.chromosomes','unplaced']}}
             (p/'manifest.json').write_text(json.dumps(manifest))
-            with self.assertRaisesRegex(ValueError,'disagrees'):verify_delivery(p/'manifest.json','S')
+            with self.assertRaisesRegex(ValueError,'inconsistent sequence sets'):assembly_bundle(p/'manifest.json')
 
     def test_stale_source_hash_is_rejected(self):
         with tempfile.TemporaryDirectory() as t:
             p=Path(t);(p/'chromosomes.fa').write_text('>chr\nACGT\n')
             (p/'manifest.json').write_text(json.dumps({'sample_id':'S','sets':{'chromosomes':{'sha256':'bad'}}}))
-            with self.assertRaisesRegex(ValueError,'checksum mismatch'):verify_delivery(p/'manifest.json','S')
+            with self.assertRaisesRegex(ValueError,'changed after delivery'):assembly_bundle(p/'manifest.json')
 
     def test_native_evidence_links_survive_publication(self):
         with tempfile.TemporaryDirectory() as t:

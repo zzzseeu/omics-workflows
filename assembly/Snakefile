@@ -1,175 +1,80 @@
-"""Portable HiFi-only and phased chromosome assembly workflows."""
+"""Seven numbered stages for single-reference, diploid and polyploid assemblies."""
 from pathlib import Path
-import re
-import json
 import sys
 
 ROOT = Path(workflow.basedir).parent
+sys.path.insert(0, str(ROOT))
+from common.workflow import script_sources
 PYTHON = sys.executable
 SAMPLES = config['sample_order']
-POLYPLOID = config.get('workflow_route') == 'polyploid'
-JOINT_SAMPLES = [s for s in SAMPLES if config['samples'][s]['settings']['scaffolding']['enabled']]
-BASE_SAMPLES = [s for s in SAMPLES if s not in JOINT_SAMPLES]
-LONG_READSET_PATTERN = '|'.join(sorted({re.escape(r) for s in SAMPLES
-    for r, read in config['samples'][s]['readsets'].items() if read['technology'] in ('hifi','ont')})) or '(?!)'
-STAGE_ARTIFACTS = [
-    *expand('samples/{sample}/10_report/manifest.json', sample=SAMPLES),
-    *expand('samples/{sample}/10_report/report.md', sample=SAMPLES),
-    *expand('samples/{sample}/10_report/report.html', sample=SAMPLES),
-    *expand('samples/{sample}/09_assessment/basic.json', sample=SAMPLES),
-    *expand('samples/{sample}/09_assessment/basic.tsv', sample=SAMPLES),
-    *expand('samples/{sample}/04_assembly/hifiasm/{set_id}.fa',
-            sample=BASE_SAMPLES, set_id=['primary', 'alternate']),
-    *expand('samples/{sample}/04_assembly/hifiasm/{set_id}.fa.fai',
-            sample=BASE_SAMPLES, set_id=['primary', 'alternate']),
-    *expand('samples/{sample}/04_assembly/hifiasm/{set_id}.gfa',
-            sample=BASE_SAMPLES, set_id=['primary', 'alternate']),
-]
-JOINT_CONTIGS = expand('samples/{sample}/04_assembly/hifiasm/{name}', sample=JOINT_SAMPLES,
-                       name=['manifest.json', 'hap1.fa', 'hap2.fa', 'hap1.fa.fai', 'hap2.fa.fai', 'hap1.gfa', 'hap2.gfa',
-                             'combined.fa', 'combined.fa.fai', 'contig_haplotypes.tsv'])
-CHROMOSOME_ARTIFACTS = expand('samples/{sample}/06_scaffolding/delivery/{name}',
-                             sample=JOINT_SAMPLES,
-                             name=['manifest.json', 'chromosomes.fa', 'chromosomes.fa.fai',
-                                   'hap1.chromosomes.fa', 'hap2.chromosomes.fa',
-                                   'hap1.chromosomes.fa.fai', 'hap2.chromosomes.fa.fai',
-                                   'chromosomes.chrom.sizes', 'hap1.chromosomes.chrom.sizes',
-                                   'hap2.chromosomes.chrom.sizes', 'unplaced.chrom.sizes', 'unplaced.fa',
-                                   'unplaced.fa.fai', 'assembly.agp', 'chromosomes.agp',
-                                   'chromosome_names.tsv', 'SHA256SUMS', 'review.request.json'])
-STAGE_ARTIFACTS += JOINT_CONTIGS + CHROMOSOME_ARTIFACTS
-STAGE_ARTIFACTS += expand('samples/{sample}/06_scaffolding/contact_maps/{name}',
-                          sample=JOINT_SAMPLES, name=['contact_map.pdf', 'separate_plots.pdf'])
-
-
-GPHASE_FILES = ['gphase_final.unitig.fasta','gphase_final.unitig.scaffold.agp','gphase_final.unitig.scaffold.fasta',
-                'gphase_final.contig.fasta','gphase_final.contig.scaffold.agp','gphase_final.contig.scaffold.fasta',
-                'gphase_final.ctg2utg.txt']
-POLY_DELIVERY_FILES = ['manifest.json','assembly.agp','components.fa','components.fa.fai','unitig_components.fa',
-                       'unitig_components.fa.fai','unitig_assembly.agp','contig_to_unitig.txt','chromosome_names.tsv',
-                       'SHA256SUMS','review.request.json',
-                       *[x+suffix for x in ['chromosomes','hap1.chromosomes','hap2.chromosomes',
-                                            'hap3.chromosomes','hap4.chromosomes','unplaced'] for suffix in ['.fa','.fa.fai']]]
-if POLYPLOID:
-    JOINT_CONTIGS = expand('samples/{sample}/04_assembly/hifiasm/{name}',sample=SAMPLES,
-                            name=['manifest.json','unitigs.fa','unitigs.fa.fai','unitigs.gfa'])
-    CHROMOSOME_ARTIFACTS = expand('samples/{sample}/06_scaffolding/delivery/{name}',sample=SAMPLES,name=POLY_DELIVERY_FILES)
-    STAGE_ARTIFACTS = JOINT_CONTIGS + CHROMOSOME_ARTIFACTS
-    STAGE_ARTIFACTS += expand('samples/{sample}/06_scaffolding/contact_maps/{name}',sample=SAMPLES,
-                               name=['contact_map.pdf','separate_plots.pdf'])
-    STAGE_ARTIFACTS += expand('samples/{sample}/{name}',sample=SAMPLES,
-                               name=['09_assessment/basic.json','09_assessment/basic.tsv',
-                                     '10_report/manifest.json','10_report/report.md','10_report/report.html'])
-
-
-def sample_readsets(sample, technology=None):
-    return [rid for rid, r in config['samples'][sample]['readsets'].items()
-            if (r['technology'] == technology if technology else r['technology'] in ('hifi','ont'))]
-
-
-def sample_files(sample, pattern):
-    return [pattern.format(sample=sample, readset=r) for r in sample_readsets(sample)]
-
-
-
-SCRIPTS = ROOT / 'assembly/scripts'
+CHROMOSOME_SAMPLES = [s for s in SAMPLES if config['samples'][s]['settings']['scaffolding']['enabled']]
+CONTIG_SAMPLES = [s for s in SAMPLES if s not in CHROMOSOME_SAMPLES]
 
 
 def script_path(name):
-    return str(SCRIPTS / (name + '.py'))
+    return str(ROOT / 'assembly/scripts' / (name + '.py'))
 
 
 def script_helpers(name):
-    """Declare imported local helper sources as tracked Snakemake inputs."""
-    import ast
-    dependencies = set()
-    pending = [name]
-    while pending:
-        helper_name = pending.pop()
-        for node in ast.walk(ast.parse(Path(script_path(helper_name)).read_text())):
-            if isinstance(node, ast.ImportFrom) and node.module:
-                source = Path(script_path(node.module))
-                if source.is_file() and str(source) not in dependencies:
-                    dependencies.add(str(source))
-                    pending.append(node.module)
-    return sorted(dependencies)
+    entry = Path(script_path(name)).resolve()
+    return [str(path) for path in script_sources(ROOT, entry) if path != entry]
 
 
-JOINT_PATTERN = '|'.join(re.escape(s) for s in JOINT_SAMPLES) or '(?!)'
+def sample_setting(wildcards, group, field):
+    return config['samples'][wildcards.sample]['settings'][group][field]
 
 
-def technology_files(sample, technology):
-    return [f'samples/{sample}/01_inputs/{r}.fastq.gz'
-            for r in sample_readsets(sample, technology)]
+def raw_files(wildcards):
+    return [read[key] for read in config['samples'][wildcards.sample]['readsets'].values()
+            for key in ('file1', 'file2') if read.get(key)]
 
 
-def paired_files(sample):
-    return [f'samples/{sample}/01_inputs/{r}.paired.json'
-            for r in sample_readsets(sample, 'hic')]
+def stage_input(wildcards):
+    settings = config['samples'][wildcards.sample]['settings']
+    return settings['finishing']['source_delivery'] or f'samples/{wildcards.sample}/03_assembly/delivery'
 
 
-T2T_SAMPLES=[s for s in SAMPLES if config['samples'][s]['settings']['finishing']['enabled']]
-T2T_PATTERN='|'.join(re.escape(s) for s in T2T_SAMPLES) or '(?!)'
-T2T_ARTIFACTS=expand('samples/{sample}/{name}',sample=T2T_SAMPLES,name=[
-    '07_finishing/manifest.json','07_finishing/genome.fa','07_finishing/genome.fa.fai','07_finishing/edits.tsv',
-    '08_polishing/manifest.json','08_polishing/genome.fa','08_polishing/genome.fa.fai',
-    '09_assessment/t2t/assessment.json','09_assessment/t2t/chromosomes.tsv','09_assessment/t2t/review.request.json',
-    '10_report/t2t/manifest.json','10_report/t2t/report.md','10_report/t2t/report.html'])
+def external_sources(wildcards):
+    source = config['samples'][wildcards.sample]['settings']['finishing']['source_delivery']
+    if not source:
+        return []
+    import json
+    data = json.loads(Path(source).read_text())
+    return [str(Path(source).parent / (label + '.fa')) for label in data['sets']]
 
 
-def finishing_delivery(w):
-    return config['samples'][w.sample]['settings']['finishing']['source_delivery'] or f'samples/{w.sample}/06_scaffolding/delivery/manifest.json'
-
-
-def finishing_source_files(w):
-    source=config['samples'][w.sample]['settings']['finishing']['source_delivery']
-    if source:
-        manifest=json.loads(Path(source).read_text())
-        return [str(Path(source).parent/(label+'.fa')) for label in manifest['sets']]
-    return [p for p in CHROMOSOME_ARTIFACTS if f'samples/{w.sample}/' in p]
-
-
-def wgs_source_files(w):
-    return [r[k] for r in config['samples'][w.sample]['readsets'].values()
-            if r['technology']=='wgs' for k in ('file1','file2')]
-
-
-wildcard_constraints:
-    sample='[A-Za-z0-9][A-Za-z0-9_.-]*',
-    readset='[A-Za-z0-9][A-Za-z0-9_.-]*'
+def final_assembly(wildcards):
+    if wildcards.sample in CHROMOSOME_SAMPLES:
+        return f'samples/{wildcards.sample}/05_polishing'
+    return f'samples/{wildcards.sample}/03_assembly/contigs'
 
 
 rule assembly_report:
     input:
-        *STAGE_ARTIFACTS, *T2T_ARTIFACTS, '10_reports/batch.json', '10_reports/batch.md', '10_reports/batch.html'
+        expand('samples/{sample}/07_report', sample=SAMPLES),
+        '07_report/summary.html',
+        '07_report/summary.tsv'
 
 
 rule assembly_contigs:
-    input:
-        [p for p in STAGE_ARTIFACTS if '/06_scaffolding/' not in p and '/10_report/' not in p
-         and '/09_assessment/' not in p]
+    input: expand('samples/{sample}/03_assembly/contigs', sample=SAMPLES)
 
 
 rule assembly_chromosomes:
-    input:
-        STAGE_ARTIFACTS
+    input: expand('samples/{sample}/03_assembly/delivery', sample=CHROMOSOME_SAMPLES)
 
 
 rule assembly_t2t:
-    input: T2T_ARTIFACTS
+    input:
+        expand('samples/{sample}/07_report', sample=CHROMOSOME_SAMPLES),
+        '07_report/summary.html',
+        '07_report/summary.tsv'
 
 
 include: 'rules/01_inputs.smk'
 include: 'rules/02_read_qc.smk'
-include: 'rules/04_assembly.smk'
-include: 'rules/05_linkage.smk'
-include: 'rules/06_scaffolding.smk'
-include: 'rules/07_finishing.smk'
-include: 'rules/08_polishing.smk'
-include: 'rules/09_assessment.smk'
-include: 'rules/10_report.smk'
-
-if not POLYPLOID:
-    ruleorder: chromosome_stage_report > sample_contig_report
-    ruleorder: assess_chromosomes > assess_contigs
-    ruleorder: joint_hifiasm > hifiasm_contigs
+include: 'rules/03_assembly.smk'
+include: 'rules/04_finishing.smk'
+include: 'rules/05_polishing.smk'
+include: 'rules/06_assessment.smk'
+include: 'rules/07_report.smk'

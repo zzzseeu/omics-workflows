@@ -6,8 +6,8 @@ import unittest
 import pysam
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT/'assembly/scripts'))
-from hic_bam_utils import bam_pairs, combine_haplotype_bams
+sys.path.insert(0, str(ROOT))
+from assembly.lib.hic import bam_pairs, combine_haplotype_bams
 
 
 class HaplotypeBamTests(unittest.TestCase):
