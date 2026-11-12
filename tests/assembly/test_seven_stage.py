@@ -413,6 +413,17 @@ class SevenStageTests(unittest.TestCase):
         self.assertFalse((folder / "intermediates").exists())
         self.assertTrue((folder / "telomeres.tsv").is_file())
 
+    def test_assessment_accepts_legacy_manifest_without_output_copies(self):
+        manifest, sequence = self.delivery()
+        record = load(manifest)
+        record.pop("output_copies")
+        save(manifest, record)
+        args = self.assessment_arguments(manifest)
+        with ExitStack() as stack:
+            self.assessment_mocks(stack, sequence)
+            assess_assembly.assess(args)
+        self.assertTrue((Path(args.out_dir) / "assessment.json").is_file())
+
     def test_native_failure_does_not_publish_completed_assessment(self):
         manifest, sequence = self.delivery()
         args = self.assessment_arguments(manifest)
@@ -441,7 +452,7 @@ class SevenStageTests(unittest.TestCase):
         self.assertEqual(interval_length([(0, 20), (10, 30), (30, 40)]), 40)
         intact = self.path / "pass.list"
         annotation = self.path / "repeat.out"
-        intact.write_text("seq000001:1..20\tpass\nseq000001:11..30\tpass\n")
+        intact.write_text("seq000001:1..20\tpass\nseq000001:30..11\tpass\n")
         annotation.write_text(
             "100 0 0 0 seq000001 1 80 0 + family LTR/Gypsy\n"
             "100 0 0 0 seq000001 81 90 0 + family LTR/Gypsy\n"
@@ -450,6 +461,23 @@ class SevenStageTests(unittest.TestCase):
         self.assertEqual(values, {"intact_fraction": 0.3, "total_ltr_fraction": 0.8})
         with self.assertRaisesRegex(ValueError, "NaN"):
             number("nan")
+
+    def test_lai_reads_modified_genome_prefix_and_reverse_coordinates(self):
+        work = self.path / "native_lai"
+
+        def native(command, **_kwargs):
+            if command[0] == "LTR_FINDER_parallel":
+                (work / "genome.fa.finder.combine.scn").write_text("candidate\n")
+            elif command[0] == "LTR_retriever":
+                (work / "genome.fa.mod.pass.list").write_text("seq000001:40..11\tpass\n")
+                (work / "genome.fa.mod.out").write_text("100 0 0 0 seq000001 1 80 0 + family LTR/Gypsy\n")
+                (work / "genome.fa.mod.out.LAI").write_text("Chr\tLAI\nwhole_genome\t15.5\nseq000001\t15.5\n")
+
+        with patch.object(assessment_tools, "execute", native):
+            result, table = assessment_tools.lai_metrics(None, {"Chr01": "ACGT" * 250}, work, 4)
+        self.assertEqual(result["LAI"], 15.5)
+        self.assertEqual(result["intact_fraction"], 0.03)
+        self.assertIn("Chr01\t15.5", table.read_text())
 
     def test_cli_help_works_for_all_unified_entries(self):
         for name in (

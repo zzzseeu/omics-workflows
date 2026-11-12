@@ -356,6 +356,7 @@ def finish(args):
             {
                 **assembly_identity(delivery),
                 "sample_id": meta["sample_id"],
+                "output_copies": copies,
                 "groups": groups,
                 "sets": stats,
                 "source_delivery_sha256": checksum(args.delivery),

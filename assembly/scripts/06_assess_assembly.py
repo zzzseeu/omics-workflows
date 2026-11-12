@@ -362,7 +362,8 @@ def assess(args):
         raise ValueError("BUSCO requires an offline lineage containing dataset.cfg")
     counts = Counter(groups.values())
     expected = source["expected_chromosomes_per_haplotype"]
-    if len(counts) != source["output_copies"] or any(count != expected for count in counts.values()):
+    declared_copies = source.get("output_copies", len(counts))
+    if len(counts) != declared_copies or any(count != expected for count in counts.values()):
         raise ValueError("Chromosome sequence sets do not match declared output copies")
     metadata = (
         load(args.metadata)
