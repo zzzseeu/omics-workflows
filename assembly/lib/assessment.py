@@ -191,7 +191,10 @@ def ltr_fractions(intact, annotation, lengths):
         match = re.fullmatch(r"(.+):(\d+)\.\.(\d+)", line.split()[0])
         if not match or match[1] not in lengths:
             raise ValueError("Unrecognized LTR_retriever intact-element coordinate")
-        intact_hits.setdefault(match[1], []).append((int(match[2]) - 1, int(match[3])))
+        start, stop = sorted((int(match[2]), int(match[3])))
+        if start < 1 or stop > lengths[match[1]]:
+            raise ValueError("LTR coordinate lies outside its sequence")
+        intact_hits.setdefault(match[1], []).append((start - 1, stop))
     for line in annotation.read_text(encoding="utf-8").splitlines():
         fields = line.split()
         if not fields or not fields[0].isdigit():
@@ -293,7 +296,12 @@ def lai_metrics(_fasta, sequences, work, threads):
     ):
         return {"status": "NOT_APPLICABLE", "reason": "No LTR candidates; LAI applicability not met"}, None
     execute(["LTR_retriever", "-genome", genome, "-inharvest", candidates, "-threads", threads], cwd=work)
-    intact, annotation = work / "genome.fa.pass.list", work / "genome.fa.out"
+    prefixes = [work / name for name in ("genome.fa", "genome.fa.mod")]
+    completed = [prefix for prefix in prefixes if Path(str(prefix) + ".pass.list").is_file()]
+    if len(completed) != 1:
+        raise ValueError("LTR_retriever intact-element output is missing or ambiguous")
+    prefix = completed[0]
+    intact, annotation = Path(str(prefix) + ".pass.list"), Path(str(prefix) + ".out")
     if intact.is_file() and not any(
         line.strip() and not line.startswith("#") for line in intact.read_text(encoding="utf-8").splitlines()
     ):
@@ -307,7 +315,7 @@ def lai_metrics(_fasta, sequences, work, threads):
             "reason": "LTR content below LAI paper applicability",
             **fractions,
         }, None
-    source = work / "genome.fa.out.LAI"
+    source = Path(str(prefix) + ".out.LAI")
     lines = source.read_text(encoding="utf-8").splitlines()
     global_rows = [line.split() for line in lines if line.startswith("whole_genome")]
     if len(global_rows) != 1:
