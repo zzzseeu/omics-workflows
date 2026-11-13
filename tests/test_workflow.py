@@ -23,7 +23,15 @@ class WorkflowTests(unittest.TestCase):
     def test_shared_module_does_not_import_an_analysis_module(self):
         tree = ast.parse(Path(workflow.__file__).read_text(encoding="utf-8"))
         imports = [node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)]
-        self.assertFalse(any(name and name.startswith("omics_workflows.workflows.") for name in imports))
+        self.assertFalse(
+            any(
+                name
+                and name.startswith("omics_workflows.")
+                and name != "omics_workflows.common"
+                and not name.startswith("omics_workflows.common.")
+                for name in imports
+            )
+        )
 
     def test_configuration_uses_the_supplied_python_validator_and_defaults(self):
         config = self.root / "config.yaml"

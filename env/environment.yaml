@@ -1,3 +1,5 @@
+# 当前组装模块的可选依赖参考；不同流程可使用各自的环境，运行时不读取本文件。
+# 组装工具和部署要求见 docs/workflows/assembly.md；通用环境选择见 docs/environment.md。
 name: omics_workflows
 channels:
 - https://conda.anaconda.org/conda-forge

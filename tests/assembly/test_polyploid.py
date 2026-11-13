@@ -8,10 +8,10 @@ import yaml
 from tests.assembly import test_config as fixtures
 
 ROOT=Path(omics_workflows.__file__).resolve().parent
-from omics_workflows.workflows.assembly.lib.scaffolding import export_polyploid as export
-from omics_workflows.workflows.assembly.lib.io import checksum, load, publish, save
-from omics_workflows.workflows.assembly.lib.assembly import relocate_internal_links
-from omics_workflows.workflows.assembly.lib.assembly import mapping_commands
+from omics_workflows.assembly.lib.scaffolding import export_polyploid as export
+from omics_workflows.assembly.lib.io import checksum, load, publish, save
+from omics_workflows.assembly.lib.assembly import relocate_internal_links
+from omics_workflows.assembly.lib.assembly import mapping_commands
 
 
 class CopyNumberInputTests(unittest.TestCase):

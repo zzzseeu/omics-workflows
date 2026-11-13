@@ -8,9 +8,9 @@ import unittest
 import omics_workflows
 
 ROOT = Path(omics_workflows.__file__).resolve().parent
-from omics_workflows.workflows.assembly.lib import sequences as agp_utils
-from omics_workflows.workflows.assembly.lib import io as io_utils
-from omics_workflows.workflows.assembly.lib.postassembly import fastq_statistics
+from omics_workflows.assembly.lib import sequences as agp_utils
+from omics_workflows.assembly.lib import io as io_utils
+from omics_workflows.assembly.lib.postassembly import fastq_statistics
 
 
 class AgpTests(unittest.TestCase):

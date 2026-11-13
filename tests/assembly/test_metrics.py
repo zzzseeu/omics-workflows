@@ -5,7 +5,7 @@ import unittest
 import omics_workflows
 
 ROOT = Path(omics_workflows.__file__).resolve().parent
-from omics_workflows.workflows.assembly.lib import sequences as tasks
+from omics_workflows.assembly.lib import sequences as tasks
 
 
 class MetricTests(unittest.TestCase):

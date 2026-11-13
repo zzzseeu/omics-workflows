@@ -19,7 +19,7 @@ project/
 
 ## 2. 安装与查看入口
 
-先按[环境管理](environment.md)准备分析软件，再使用目标环境的 Python 安装框架：
+各流程按自身依赖选择环境，可以独立准备，也可复用兼容的已有环境。先按流程手册和[环境管理](environment.md)准备软件，再使用所选环境的 Python 安装框架；以下以当前组装模块为例：
 
 ```bash
 python -m pip install '/path/to/omics-workflows[assembly]'
@@ -30,11 +30,11 @@ omics-workflows assembly --help
 
 环境已具备全部依赖时，可加 `--no-deps` 安装框架，避免重新解析依赖。离线部署使用预先构建的 wheel。`--help` 不要求生信软件已部署；实际运行时检查所选流程的依赖。
 
-命令可从任意目录执行；`python -m omics_workflows` 等效。源码用户仍可使用 `/path/to/omics-workflows/run.py`。`--env-prefix` 指向已有分析环境，不负责安装或更新环境。
+安装后命令可从任意目录执行；`python -m omics_workflows.cli` 等效。在仓库根目录也可直接运行该模块；开发时可用 `python -m pip install -e '.[assembly]'` 安装。按环境名称调用可用 `conda run -n omics_workflows omics-workflows assembly ...`，micromamba 同样支持 `run -n`；`--env-prefix` 按路径选择已有环境，不负责安装或更新环境。
 
 ## 3. 准备项目配置
 
-按所选流程的手册，将模板复制到项目并填写真实输入。Assembly 的完整模板见 [模块示例目录](../src/omics_workflows/workflows/assembly/examples/)，参数定义见 [Assembly 手册](workflows/assembly.md)。
+按所选流程的手册，将模板复制到项目并填写真实输入。Assembly 的完整模板见 [模块示例目录](../omics_workflows/assembly/examples/)，参数定义见 [Assembly 手册](workflows/assembly.md)。
 
 先做只读元数据预检，再查看 DAG：
 
@@ -71,7 +71,7 @@ omics-workflows assembly \
 
 ```bash
 DEMO_PROJECT=/absolute/path/to/new_demo_project
-python -m omics_workflows.workflows.assembly.examples.prepare_demo \
+python -m omics_workflows.assembly.examples.prepare_demo \
   --project-dir "$DEMO_PROJECT"
 
 omics-workflows assembly \

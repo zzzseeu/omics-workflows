@@ -15,7 +15,7 @@ from omics_workflows import __version__, cli
 from omics_workflows.common.arguments import argument_parser
 from omics_workflows.common.resources import package_directory, source_boundary
 from omics_workflows.common.workflow import script_sources
-from omics_workflows.workflows.assembly import runner
+from omics_workflows.assembly import runner
 
 
 class PackagingTests(unittest.TestCase):
@@ -44,7 +44,7 @@ class PackagingTests(unittest.TestCase):
     def test_every_installed_command_parameter_has_a_description_and_type(self):
         modules = [cli, runner]
         modules.extend(
-            importlib.import_module(f"omics_workflows.workflows.assembly.scripts.{name}")
+            importlib.import_module(f"omics_workflows.assembly.scripts.{name}")
             for name in (
                 "01_prepare_inputs",
                 "02_quality_reads",
@@ -55,7 +55,7 @@ class PackagingTests(unittest.TestCase):
                 "07_write_assembly_report",
             )
         )
-        modules.append(importlib.import_module("omics_workflows.workflows.assembly.examples.prepare_demo"))
+        modules.append(importlib.import_module("omics_workflows.assembly.examples.prepare_demo"))
         for module in modules:
             with self.subTest(command=module.__name__):
                 parsers, output = self.inspect_command_help(module)
@@ -121,7 +121,7 @@ class PackagingTests(unittest.TestCase):
 
     def test_all_runtime_rules_and_templates_are_package_resources(self):
         with package_directory() as package:
-            assembly = package / "workflows/assembly"
+            assembly = package / "assembly"
             for name in ("Snakefile", "defaults.yaml"):
                 self.assertTrue((assembly / name).is_file(), name)
             self.assertFalse((assembly / "schema.yaml").exists())
@@ -133,7 +133,7 @@ class PackagingTests(unittest.TestCase):
     def test_editable_source_boundary_protects_the_whole_checkout(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            package = root / "src/example"
+            package = root / "example"
             package.mkdir(parents=True)
             (root / "pyproject.toml").touch()
             self.assertEqual(source_boundary(package), root)
@@ -182,7 +182,7 @@ class PackagingTests(unittest.TestCase):
                     runner.main(arguments)
             executable, command, environment = execute.call_args.args
             self.assertEqual(executable, str(python))
-            self.assertEqual(command[1:4], ["-m", "omics_workflows", "assembly"])
+            self.assertEqual(command[1:4], ["-m", "omics_workflows.cli", "assembly"])
             self.assertEqual(command[4:], arguments)
             with package_directory() as package:
                 self.assertEqual(environment["PYTHONPATH"].split(os.pathsep)[0], str(package.parent))

@@ -7,7 +7,7 @@ import omics_workflows
 import yaml
 
 ROOT = Path(omics_workflows.__file__).resolve().parent
-from omics_workflows.workflows.assembly import runner as module
+from omics_workflows.assembly import runner as module
 
 
 class ConfigTests(unittest.TestCase):

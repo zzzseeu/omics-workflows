@@ -1,22 +1,29 @@
 """Public command and project-boundary contracts for the simplified source layout."""
 
+import os
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
+import omics_workflows
+
 ROOT = Path(__file__).resolve().parents[1]
+PACKAGE = Path(omics_workflows.__file__).resolve().parent
 
 
 class InterfaceTests(unittest.TestCase):
     def invoke(self, *args):
-        return subprocess.run(
-            ["/usr/bin/python3", str(ROOT / "run.py"), *args],
-            capture_output=True,
-            text=True,
-            timeout=30,
-            check=False,
-        )
+        with tempfile.TemporaryDirectory() as directory:
+            return subprocess.run(
+                ["/usr/bin/python3", "-m", "omics_workflows.cli", *args],
+                cwd=directory,
+                env=dict(os.environ, PYTHONPATH=str(PACKAGE.parent), PYTHONDONTWRITEBYTECODE="1"),
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
 
     def test_root_help_without_analysis_environment(self):
         result = self.invoke("--help")
@@ -39,7 +46,7 @@ class InterfaceTests(unittest.TestCase):
             result = subprocess.run(
                 [
                     "/usr/bin/python3",
-                    str(ROOT / "src/omics_workflows/workflows/assembly/runner.py"),
+                    str(PACKAGE / "assembly/runner.py"),
                     "--help",
                 ],
                 cwd=directory,
@@ -60,9 +67,12 @@ class InterfaceTests(unittest.TestCase):
             {
                 p.name
                 for p in ROOT.iterdir()
-                if p.is_dir() and not p.name.startswith(".") and p.name not in {"build", "dist"}
+                if p.is_dir()
+                and not p.name.startswith(".")
+                and not p.name.endswith(".egg-info")
+                and p.name not in {"build", "dist"}
             },
-            {"src", "env", "tests", "docs"},
+            {"omics_workflows", "env", "tests", "docs"},
         )
 
 

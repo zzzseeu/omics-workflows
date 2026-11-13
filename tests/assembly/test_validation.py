@@ -5,7 +5,7 @@ import unittest
 
 from omics_workflows.common.resources import workflow_defaults
 from omics_workflows.common.workflow import ConfigError
-from omics_workflows.workflows.assembly.runner import validate_config, validate_settings
+from omics_workflows.assembly.runner import validate_config, validate_settings
 
 
 class ValidationTests(unittest.TestCase):
