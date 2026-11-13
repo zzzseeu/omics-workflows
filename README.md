@@ -15,7 +15,7 @@ omics-workflows list
 omics-workflows assembly --help
 ```
 
-安装框架不会部署 hifiasm、HapHiC、GPhase 或数据库。若环境已具备全部 Python 依赖，可用 `python -m pip install --no-deps /path/to/omics-workflows` 安装框架。普通服务器直接运行；HPC 上由项目提交一个完整作业，内部使用 Snakemake local executor。
+安装框架不会部署 hifiasm、HapHiC、GPhase 或数据库等分析流程所需的生信软件，这一类软件需要自行配置环境，omics-workflows 只会安装本项目所需的 Python 依赖。若环境已具备全部 Python 依赖，可用 `python -m pip install --no-deps /path/to/omics-workflows` 安装框架。普通服务器直接运行；HPC 上由项目提交一个完整作业，内部使用 Snakemake local executor。
 
 ```bash
 omics-workflows assembly \
