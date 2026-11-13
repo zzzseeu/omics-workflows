@@ -4,16 +4,15 @@ import copy
 import gzip
 import json
 from pathlib import Path
-import sys
 import tempfile
 import unittest
+import omics_workflows
 from unittest.mock import patch
 
-ROOT=Path(__file__).resolve().parents[2]
-sys.path.insert(0,str(ROOT))
-from assembly.lib.io import checksum, save, signature
-from assembly.lib.reads import describe_prepared_input
-from assembly.lib.reads import attest, reuse
+ROOT=Path(omics_workflows.__file__).resolve().parent
+from omics_workflows.workflows.assembly.lib.io import checksum, save, signature
+from omics_workflows.workflows.assembly.lib.reads import describe_prepared_input
+from omics_workflows.workflows.assembly.lib.reads import attest, reuse
 
 
 class PreparedReuseTests(unittest.TestCase):
@@ -69,7 +68,7 @@ class PreparedReuseTests(unittest.TestCase):
 
     def test_producer_hash_uses_metadata_only_cache(self):
         spec=self.producer()
-        with patch('assembly.lib.reads.scan_legacy',side_effect=AssertionError('must not scan')):
+        with patch('omics_workflows.workflows.assembly.lib.reads.scan_legacy',side_effect=AssertionError('must not scan')):
             first,hit,sha=attest(spec);self.assertFalse(hit)
             second,hit,sha=attest(spec);self.assertTrue(hit)
         self.assertEqual(first['prepared_sha256'],checksum(self.fastq));self.assertEqual(first,second)
@@ -77,7 +76,7 @@ class PreparedReuseTests(unittest.TestCase):
     def test_changed_prepared_file_is_not_silently_recertified(self):
         spec=self.producer();attest(spec)
         self.fastq.touch();changed={**self.spec,'prepared_reuse':self.descriptor()}
-        with patch('assembly.lib.reads.scan_legacy',side_effect=AssertionError('must not rescan')):
+        with patch('omics_workflows.workflows.assembly.lib.reads.scan_legacy',side_effect=AssertionError('must not rescan')):
             with self.assertRaisesRegex(ValueError,'Cached prepared FASTQ changed'):attest(changed)
 
     def test_link_does_not_copy_or_touch_original(self):
@@ -97,7 +96,7 @@ class PreparedReuseTests(unittest.TestCase):
     def test_stage_one_validates_reused_reads_without_seqkit(self):
         import importlib
         from types import SimpleNamespace
-        prepare = importlib.import_module("assembly.scripts.01_prepare_inputs").prepare_sample
+        prepare = importlib.import_module("omics_workflows.workflows.assembly.scripts.01_prepare_inputs").prepare_sample
         spec=self.producer()
         metadata=self.root/'metadata.json'
         save(metadata, {'sample_id':'A','settings':{'assembly':{'strategy':'single'}},'readsets':{'r1':spec}})

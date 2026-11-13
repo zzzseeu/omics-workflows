@@ -55,7 +55,6 @@ rice01	wgs01	W1	wgs	fastq	../data/wgs.R1.fastq.gz	../data/wgs.R2.fastq.gz
 单套水稻配置示例：
 
 ```yaml
-schema_version: 1
 samples_table: samples.tsv
 readsets_table: readsets.tsv
 defaults:
@@ -93,11 +92,11 @@ defaults:
 
 仅在需要修改组装时开启 finishing，再选择 gap_closing、telomere_completion；两项独立。碱基纠错由 polishing.enabled 独立控制，不要求先开启补洞。最终七类评估独立于这两个开关，完整染色体报告不能关闭它。
 
-完整参数及类型见 [defaults.yaml](../../assembly/defaults.yaml) 和 [schema.yaml](../../assembly/schema.yaml)。配置模板见 [单套参考](../../assembly/examples/single_hic/config.yaml)、[二倍体分相](../../assembly/examples/hifi_ul_hic/config.yaml)和[多倍体分相](../../assembly/examples/polyploid/config.yaml)；替换样本数据、建库信息和数据库路径后再检查。
+参数默认值见 [defaults.yaml](../../src/omics_workflows/workflows/assembly/defaults.yaml)，类型、取值和组合条件由 [runner.py中的检查函数](../../src/omics_workflows/workflows/assembly/runner.py)定义。配置模板见 [单套参考](../../src/omics_workflows/workflows/assembly/examples/single_hic/config.yaml)、[二倍体分相](../../src/omics_workflows/workflows/assembly/examples/hifi_ul_hic/config.yaml)和[多倍体分相](../../src/omics_workflows/workflows/assembly/examples/polyploid/config.yaml)；替换样本数据、建库信息和数据库路径后再检查。
 
 ## 3. 七个步骤的实现与输入输出
 
-`assembly/scripts/` 只保留七个带编号的步骤入口，共享实现位于 `assembly/lib/`。下列路径相对 `samples/<sample_id>/`，入口、目录编号与步骤一一对应。JSON 清单记录文件校验值、来源和参数，供后续步骤核对。
+`omics_workflows/workflows/assembly/scripts/` 只保留七个带编号的步骤入口，共享实现位于 `omics_workflows/workflows/assembly/lib/`。下列路径相对 `samples/<sample_id>/`，入口、目录编号与步骤一一对应。JSON 清单记录文件校验值、来源和参数，供后续步骤核对。
 
 | 步骤与实现入口 | 输入 | 实现方式与工具 | 核心输出及格式 |
 |---|---|---|---|
@@ -154,11 +153,10 @@ Inspector 错误定位、独立相位验证和污染筛查属于另行开展的�
 在统一环境中运行，或用 --env-prefix 指定环境。HPC 上由项目提交一个 CSUB 作业，内部以 Snakemake local executor 执行；--cores、--mem-mb 与申请资源一致。
 
 ```bash
-WORKFLOW_ROOT=/absolute/path/to/omics-workflows
 OMICS_ENV_PREFIX=/absolute/path/to/envs/omics_workflows
 PROJECT_ROOT=/absolute/path/to/project
 
-"$WORKFLOW_ROOT/run" assembly \
+omics-workflows assembly \
   --env-prefix "$OMICS_ENV_PREFIX" \
   --config "$PROJECT_ROOT/config/config.yaml" \
   --run-dir "$PROJECT_ROOT/runs/assembly001" \
@@ -181,19 +179,19 @@ PROJECT_ROOT=/absolute/path/to/project
 三个后处理脚本均可独立调用 --help。固定输入为组装清单和质控后读段清单，参数由 Python 命令行指定：
 
 ```bash
-python assembly/scripts/04_finish_chromosomes.py \
+python -m omics_workflows.workflows.assembly.scripts.04_finish_chromosomes \
   --assembly-manifest /run/samples/rice01/03_assembly/delivery/manifest.json \
   --reads-manifest /run/samples/rice01/02_read_qc/manifest.json \
   --gap-closing --telomere-completion --telomere-motif TTTAGGG \
   --threads 8 --out-dir /run/samples/rice01/04_finishing
 
-python assembly/scripts/05_polish_chromosomes.py \
+python -m omics_workflows.workflows.assembly.scripts.05_polish_chromosomes \
   --assembly-manifest /run/samples/rice01/04_finishing/manifest.json \
   --reads-manifest /run/samples/rice01/02_read_qc/manifest.json \
   --kmer-sizes 21 31 --min-mapq 30 --threads 8 \
   --out-dir /run/samples/rice01/05_polishing
 
-python assembly/scripts/06_assess_assembly.py \
+python -m omics_workflows.workflows.assembly.scripts.06_assess_assembly \
   --assembly-manifest /run/samples/rice01/05_polishing/manifest.json \
   --reads-manifest /run/samples/rice01/02_read_qc/manifest.json \
   --busco-lineage /path/to/appropriate_lineage --telomere-motif TTTAGGG \

@@ -1,18 +1,17 @@
 """Polyploid strategy contracts and complete-copy delivery gates."""
 from pathlib import Path
-import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
+import omics_workflows
 import yaml
 from tests.assembly import test_config as fixtures
 
-ROOT=Path(__file__).resolve().parents[2]
-sys.path.insert(0,str(ROOT))
-from assembly.lib.scaffolding import export_polyploid as export
-from assembly.lib.io import checksum, load, publish, save
-from assembly.lib.assembly import relocate_internal_links
-from assembly.lib.assembly import mapping_commands
+ROOT=Path(omics_workflows.__file__).resolve().parent
+from omics_workflows.workflows.assembly.lib.scaffolding import export_polyploid as export
+from omics_workflows.workflows.assembly.lib.io import checksum, load, publish, save
+from omics_workflows.workflows.assembly.lib.assembly import relocate_internal_links
+from omics_workflows.workflows.assembly.lib.assembly import mapping_commands
 
 
 class CopyNumberInputTests(unittest.TestCase):

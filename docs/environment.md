@@ -17,6 +17,15 @@ tidk 0.3.1 属于最终端粒检查的基础依赖。T2T 完善的可选依赖�
 
 ## 使用已有环境
 
+生信软件环境与框架安装分别管理。先准备工具，再将框架装入目标环境；框架本身不自动安装生信软件或数据库。统一环境已有全部 Python 依赖时：
+
+```bash
+/path/to/envs/omics_workflows/bin/python -m pip install --no-deps /path/to/omics-workflows
+/path/to/envs/omics_workflows/bin/omics-workflows --version
+```
+
+也可安装预先构建的 wheel，实际分析不需要保留源码仓库。源码工具部署和更新仍使用本目录下的安装器与锁文件。
+
 激活环境后调用统一入口，或传入 `--env-prefix /path/to/envs/omics_workflows`。该选项用于切换到已有环境，不创建或更新环境。调用案例见 [快速开始](quickstart.md)。
 
 ## 创建与验证

@@ -1,0 +1,6 @@
+include .pylintrc
+include run.py
+recursive-include env *.yaml *.txt *.tsv *.json *.lock *.patch *.py *.sh
+recursive-include docs *.md
+recursive-include tests *.py
+global-exclude __pycache__ *.py[cod]

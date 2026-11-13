@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from common import workflow
+from omics_workflows.common import workflow
 
 
 class WorkflowTests(unittest.TestCase):
@@ -23,25 +23,64 @@ class WorkflowTests(unittest.TestCase):
     def test_shared_module_does_not_import_an_analysis_module(self):
         tree = ast.parse(Path(workflow.__file__).read_text(encoding="utf-8"))
         imports = [node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)]
-        self.assertFalse(any(name and name.startswith("assembly") for name in imports))
+        self.assertFalse(any(name and name.startswith("omics_workflows.workflows.") for name in imports))
 
-    def test_configuration_uses_the_supplied_schema_and_defaults(self):
-        schema = self.root / "schema.yaml"
+    def test_configuration_uses_the_supplied_python_validator_and_defaults(self):
         config = self.root / "config.yaml"
         defaults = self.root / "defaults.yaml"
-        schema.write_text(
-            "type: object\nadditionalProperties: false\nrequired: [assay]\n"
-            "properties:\n  assay: {const: expression}\n  options: {type: object}\n",
-            encoding="utf-8",
-        )
+
+        def validate(values):
+            """由示例模块直接声明允许的字段和值，不加载外部校验文件。"""
+            workflow.check_fields(values, {"assay", "options"}, required={"assay"})
+            workflow.check_value(values["assay"], str, "assay", choices=("expression",))
+            if "options" in values:
+                workflow.check_fields(values["options"], {"threads", "paired"}, path="options")
+
         defaults.write_text("options: {threads: 2, paired: true}\n", encoding="utf-8")
         config.write_text("assay: expression\noptions: {threads: 4}\n", encoding="utf-8")
-        merged = workflow.merge(workflow.load_defaults(defaults), workflow.load_configuration(config, schema))
+        merged = workflow.merge(
+            workflow.load_defaults(defaults), workflow.load_configuration(config, validate)
+        )
         self.assertEqual(merged["options"], {"threads": 4, "paired": True})
         self.assertEqual(workflow.load_defaults(defaults)["options"]["threads"], 2)
         config.write_text("assay: unsupported\n", encoding="utf-8")
         with self.assertRaisesRegex(workflow.ConfigError, "Configuration validation failed"):
-            workflow.load_configuration(config, schema)
+            workflow.load_configuration(config, validate)
+
+    def test_yaml_root_and_parse_errors_are_reported_before_the_module_validator(self):
+        config = self.root / "config.yaml"
+        validate = Mock()
+        for value in ("", "[]\n", "null\n", "input: [\n"):
+            with self.subTest(value=value):
+                config.write_text(value, encoding="utf-8")
+                with self.assertRaisesRegex(workflow.ConfigError, "Configuration validation failed"):
+                    workflow.load_configuration(config, validate)
+        validate.assert_not_called()
+
+    def test_legacy_normalization_runs_before_the_python_validator(self):
+        config = self.root / "config.yaml"
+        config.write_text("legacy: value\n", encoding="utf-8")
+        normalize = Mock(return_value={"current": "value"})
+        validate = Mock()
+        result = workflow.load_configuration(config, validate, normalize)
+        normalize.assert_called_once_with({"legacy": "value"})
+        validate.assert_called_once_with({"current": "value"})
+        self.assertEqual(result, {"current": "value"})
+
+    def test_field_checks_reject_wrong_structure_keys_and_missing_fields(self):
+        for value in (None, [], {1: "value"}, {"unknown": 1}):
+            with self.subTest(value=value), self.assertRaises(workflow.ConfigError):
+                workflow.check_fields(value, {"required"}, required={"required"})
+
+    def test_value_checks_do_not_coerce_types_and_reject_nonfinite_numbers(self):
+        for value in (True, False, "8", 8.0):
+            with self.subTest(value=value), self.assertRaises(workflow.ConfigError):
+                workflow.check_value(value, int, "threads", minimum=1)
+        for value in (float("nan"), float("inf"), -float("inf")):
+            with self.subTest(value=value), self.assertRaises(workflow.ConfigError):
+                workflow.check_value(value, (int, float), "quality", minimum=0)
+        workflow.check_value(None, (int, type(None)), "optional_count", minimum=1)
+        workflow.check_value(7.5, (int, float), "quality", minimum=0)
 
     def test_sample_selection_and_technology_values_are_supplied_by_caller(self):
         samples, selected = workflow.select_samples([{"sample_id": "A"}, {"sample_id": "B"}], ["B"])
@@ -179,9 +218,11 @@ class WorkflowTests(unittest.TestCase):
             return 0
 
         process.wait.side_effect = wait
-        with patch.object(workflow.subprocess, "Popen", return_value=process), patch.object(
-            workflow.signal, "signal", side_effect=install
-        ), patch.object(workflow.os, "killpg") as kill:
+        with (
+            patch.object(workflow.subprocess, "Popen", return_value=process),
+            patch.object(workflow.signal, "signal", side_effect=install),
+            patch.object(workflow.os, "killpg") as kill,
+        ):
             code = workflow.execute_workflow(self.plan(), self.root / "Snakefile", "counts")
         self.assertEqual(code, 128 + signal.SIGTERM)
         kill.assert_called_once_with(12345, signal.SIGTERM)

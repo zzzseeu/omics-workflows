@@ -25,10 +25,12 @@ TIDK_SHA = "6f4ef177e317193c3ad1ae132534b9b8947440a849c275f356e0b6fe4abf6570"
 
 
 def sha(path):
+    """读取下载文件并返回SHA-256，供缓存归档和固定来源校验使用。"""
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 def main():
+    """按固定来源下载或部署T2T工具扩展，核对包与源码指纹并写安装锁，不覆盖已锁定扩展。"""
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--cache", type=Path, required=True)
     p.add_argument(
@@ -74,6 +76,7 @@ def main():
     archives = {}
 
     def download(url, name):
+        """把指定URL缓存为给定文件名，记录来源与SHA-256，返回缓存路径；已存在时复用。"""
         path = args.cache / name
         if not path.exists():
             urllib.request.urlretrieve(url, path)
@@ -92,6 +95,7 @@ def main():
                         tar.extract(member, destination, filter="data")
 
     def conda_binary(url, name, expected):
+        """校验固定conda包指纹并解包指定二进制到扩展目录，防止安装来源漂移。"""
         archive = download(url, name + ".conda")
         if sha(archive) != expected:
             raise ValueError(name + " package checksum mismatch")

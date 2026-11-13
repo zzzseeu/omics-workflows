@@ -17,33 +17,38 @@ project/
 
 原始数据可以引用其他路径，无需搬进项目。运行目录必须在代码仓库外，原始输入也必须在运行目录外。
 
-## 2. 查看入口
+## 2. 安装与查看入口
+
+先按[环境管理](environment.md)准备分析软件，再使用目标环境的 Python 安装框架：
 
 ```bash
-/path/to/omics-workflows/run --help
-/path/to/omics-workflows/run assembly --help
+python -m pip install '/path/to/omics-workflows[assembly]'
+omics-workflows --version
+omics-workflows list
+omics-workflows assembly --help
 ```
 
-`--help` 不需要数据。实际运行使用统一的 `omics_workflows` 环境：激活后直接调用，或使用 `--env-prefix` 指定前缀。环境准备见 [环境管理](environment.md)。
+环境已具备全部依赖时，可加 `--no-deps` 安装框架，避免重新解析依赖。离线部署使用预先构建的 wheel。`--help` 不要求生信软件已部署；实际运行时检查所选流程的依赖。
+
+命令可从任意目录执行；`python -m omics_workflows` 等效。源码用户仍可使用 `/path/to/omics-workflows/run.py`。`--env-prefix` 指向已有分析环境，不负责安装或更新环境。
 
 ## 3. 准备项目配置
 
-按所选流程的手册，将模板复制到项目并填写真实输入。Assembly 的完整模板见 [模块示例目录](../assembly/examples/)，参数定义见 [Assembly 手册](workflows/assembly.md)。
+按所选流程的手册，将模板复制到项目并填写真实输入。Assembly 的完整模板见 [模块示例目录](../src/omics_workflows/workflows/assembly/examples/)，参数定义见 [Assembly 手册](workflows/assembly.md)。
 
 先做只读元数据预检，再查看 DAG：
 
 ```bash
-WORKFLOW_ROOT=/absolute/path/to/omics-workflows
 OMICS_ENV_PREFIX=/absolute/path/to/envs/omics_workflows
 PROJECT_ROOT=/absolute/path/to/project
 
-"$WORKFLOW_ROOT/run" assembly \
+omics-workflows assembly \
   --env-prefix "$OMICS_ENV_PREFIX" \
   --config "$PROJECT_ROOT/config/assembly.yaml" \
   --run-dir "$PROJECT_ROOT/runs/run001" \
   --cores 8 --mem-mb 64000 --check
 
-"$WORKFLOW_ROOT/run" assembly \
+omics-workflows assembly \
   --env-prefix "$OMICS_ENV_PREFIX" \
   --config "$PROJECT_ROOT/config/assembly.yaml" \
   --run-dir "$PROJECT_ROOT/runs/run001" \
@@ -66,10 +71,10 @@ PROJECT_ROOT=/absolute/path/to/project
 
 ```bash
 DEMO_PROJECT=/absolute/path/to/new_demo_project
-"$OMICS_ENV_PREFIX/bin/python" "$WORKFLOW_ROOT/assembly/examples/prepare_demo.py" \
+python -m omics_workflows.workflows.assembly.examples.prepare_demo \
   --project-dir "$DEMO_PROJECT"
 
-"$WORKFLOW_ROOT/run" assembly \
+omics-workflows assembly \
   --env-prefix "$OMICS_ENV_PREFIX" \
   --config "$DEMO_PROJECT/config/config.yaml" \
   --run-dir "$DEMO_PROJECT/runs/demo001" \

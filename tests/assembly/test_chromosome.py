@@ -2,16 +2,15 @@
 import importlib.util
 import json
 from pathlib import Path
-import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
+import omics_workflows
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
-from assembly.lib import sequences as agp_utils
-from assembly.lib import io as io_utils
-from assembly.lib.postassembly import fastq_statistics
+ROOT = Path(omics_workflows.__file__).resolve().parent
+from omics_workflows.workflows.assembly.lib import sequences as agp_utils
+from omics_workflows.workflows.assembly.lib import io as io_utils
+from omics_workflows.workflows.assembly.lib.postassembly import fastq_statistics
 
 
 class AgpTests(unittest.TestCase):

@@ -2,15 +2,14 @@
 import importlib.util
 import json
 from pathlib import Path
-import sys
 import tempfile
 import unittest
+import omics_workflows
 
-ROOT=Path(__file__).resolve().parents[2]
-sys.path.insert(0,str(ROOT))
-from assembly.lib.sequences import fasta_statistics
-from assembly.lib.io import checksum
-from assembly.lib.postassembly import inspect_sequences, rebase_symlinks, supported_alignments, terminal_repeats, assembly_bundle, write_sequences
+ROOT=Path(omics_workflows.__file__).resolve().parent
+from omics_workflows.workflows.assembly.lib.sequences import fasta_statistics
+from omics_workflows.workflows.assembly.lib.io import checksum
+from omics_workflows.workflows.assembly.lib.postassembly import inspect_sequences, rebase_symlinks, supported_alignments, terminal_repeats, assembly_bundle, write_sequences
 
 
 class PostassemblyTests(unittest.TestCase):

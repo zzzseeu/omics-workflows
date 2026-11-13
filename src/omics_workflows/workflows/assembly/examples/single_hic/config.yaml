@@ -1,0 +1,24 @@
+samples_table: samples.tsv  # 字符串，TSV路径；样本信息表，相对路径以本YAML所在目录为基准。
+readsets_table: readsets.tsv  # 字符串，TSV路径；测序数据表，表内读段路径以该TSV所在目录为基准。
+defaults:  # 映射；全体样本的默认设置，随后可被analysis_profiles和samples逐级覆盖。
+  assembly:  # 映射；初步组装的路线、工具参数和资源设置。
+    mode: hifi_hic  # 字符串枚举；hifi_only仅生成contig，hifi_hic使用HiFi+Hi-C，hifi_ul_hic另加ONT超长读段。
+    threads: 32  # 正整数，CPU线程数；运行时不超过命令行--cores指定的总预算。
+    mem_mb: 240000  # 整数，单位MB；本步骤内存预算，须与命令行总预算及任务申请资源匹配。
+    strategy: single  # 字符串枚举；single交付单套参考，diploid交付二倍体两套序列，polyploid交付P套序列且P>=3。
+  scaffolding:  # 映射；Hi-C染色体挂载及相关资源设置。
+    enabled: true  # 布尔值true/false；启用Hi-C染色体挂载；染色体路线须为true，HiFi-only须为false。
+    threads: 32  # 正整数，CPU线程数；运行时不超过命令行--cores指定的总预算。
+    mem_mb: 128000  # 整数，单位MB；本步骤内存预算，须与命令行总预算及任务申请资源匹配。
+    processes: 8  # 正整数；HapHiC并行进程数，运行时不超过挂载步骤线程数。
+    restriction_sites: GATC  # 字符串；实际Hi-C酶切位点，多个位点用逗号分隔，如GATC或GATC,GANTC；按建库记录填写。
+    enzyme_provenance: UNKNOWN_DEFAULT_replace_with_library_protocol  # 字符串；Hi-C建库酶切信息来源，必须把示例占位符替换为真实建库记录。
+    correct_nrounds: 0  # 整数0至10；HapHiC组装纠错轮数；0表示关闭，多倍体GPhase固定要求0。
+  finishing:  # 映射；补洞和染色体末端延伸设置。
+    telomere_motif: TTTAGGG  # 字符串，2至20个大写ACGT碱基；已知端粒重复单元，供完善和最终检查使用，须与材料背景一致。
+  assessment:  # 映射；最终质量评估设置；染色体路线固定执行七类检查。
+    busco_lineage: /absolute/path/to/appropriate_lineage  # 字符串，目录路径；适合物种的离线BUSCO数据库，目录须含dataset.cfg；相对路径以本YAML为基准。
+samples:  # 映射；按样本ID覆盖设置，优先级高于defaults及analysis_profiles。
+  sample_A:  # 样本ID键，字符串；须与samples.tsv中的sample_id一致，下面是该样本的覆盖设置。
+    ploidy: 2  # 正整数或null；材料真实倍性，单套参考也按真实倍性填写；染色体路线必填，HiFi-only可为null。
+    chromosomes_per_haplotype: 12  # 正整数或null；每套染色体数，水稻通常填12；染色体挂载必填，HiFi-only可为null。

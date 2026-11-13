@@ -1,0 +1,35 @@
+samples_table: samples.tsv  # 字符串，TSV路径；样本信息表，相对路径以本YAML所在目录为基准。
+readsets_table: readsets.tsv  # 字符串，TSV路径；测序数据表，表内读段路径以该TSV所在目录为基准。
+
+defaults:  # 映射；全体样本的默认设置，随后可被analysis_profiles和samples逐级覆盖。
+  assembly:  # 映射；初步组装的路线、工具参数和资源设置。
+    backend: hifiasm  # 字符串枚举；组装工具固定为hifiasm。
+    mode: hifi_only  # 字符串枚举；hifi_only仅生成contig，hifi_hic使用HiFi+Hi-C，hifi_ul_hic另加ONT超长读段。
+    representation: primary_alternate  # 字符串枚举；primary_alternate为主组装与替代序列，phased为二倍体分相，unitigs为原始图；显式strategy优先确定此值。
+    threads: 8  # 正整数，CPU线程数；运行时不超过命令行--cores指定的总预算。
+    mem_mb: 64000  # 整数，单位MB；本步骤内存预算，须与命令行总预算及任务申请资源匹配。
+    bloom_filter_bits: 37  # 整数0至39；hifiasm的-f指数，布隆过滤器约占2^值个bit；0用于小数据关闭该过滤器。
+    purge_level: null  # 整数0至3或null；hifiasm的-l去冗余等级，null沿用工具默认；多倍体原始图路线只允许0或null。
+  scaffolding:  # 映射；Hi-C染色体挂载及相关资源设置。
+    enabled: false  # 布尔值true/false；启用Hi-C染色体挂载；染色体路线须为true，HiFi-only须为false。
+  finishing:  # 映射；补洞和染色体末端延伸设置。
+    enabled: false  # 布尔值true/false；启用组装完善；还须选择gap_closing或telomere_completion。
+    gap_closing: false  # 布尔值true/false；是否尝试补洞，需同时启用finishing.enabled。
+    telomere_completion: false  # 布尔值true/false；是否尝试有读段支持的末端延伸，需同时启用finishing.enabled。
+  polishing:  # 映射；HiFi与普通WGS支持的NextPolish2碱基纠错设置。
+    enabled: false  # 布尔值true/false；启用NextPolish2碱基纠错；需要清洁HiFi及普通WGS，不能用Hi-C替代WGS。
+  assessment:  # 映射；最终质量评估设置；染色体路线固定执行七类检查。
+    busco: false  # 布尔值true/false；旧版兼容开关，HiFi-only须为false；染色体路线仍固定检查BUSCO。
+    kmer: false  # 布尔值true/false；旧版兼容开关，HiFi-only须为false；染色体路线有普通WGS时固定运行Merqury。
+    read_mapping: false  # 布尔值true/false；旧版兼容开关，HiFi-only须为false；染色体路线固定检查HiFi读段支持。
+
+analysis_profiles:  # 映射；命名的分析参数组合，由samples.tsv中的profile选择。
+  hifi_contigs: {}  # 映射；名为hifi_contigs的参数组合，空映射{}表示完全继承defaults。
+
+samples:  # 映射；按样本ID覆盖设置，优先级高于defaults及analysis_profiles。
+  sample_A:  # 样本ID键，字符串；须与samples.tsv中的sample_id一致，下面是该样本的覆盖设置。
+    ploidy: 2  # 正整数或null；材料真实倍性，单套参考也按真实倍性填写；染色体路线必填，HiFi-only可为null。
+    genome_size_bp: null  # 正整数或null，单位bp；已知基因组大小的可选记录，不在此流程中推断。
+    chromosomes_per_haplotype: null  # 正整数或null；每套染色体数，水稻通常填12；染色体挂载必填，HiFi-only可为null。
+  sample_B:  # 样本ID键，字符串；须与samples.tsv中的sample_id一致，下面是该样本的覆盖设置。
+    ploidy: null  # 正整数或null；材料真实倍性，单套参考也按真实倍性填写；染色体路线必填，HiFi-only可为null。

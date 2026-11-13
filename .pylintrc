@@ -1,6 +1,6 @@
 [MAIN]
 py-version=3.12
-init-hook=import sys; sys.path.insert(0, '.')
+init-hook=import sys; sys.path.insert(0, 'src')
 extension-pkg-allow-list=pysam
 
 [FORMAT]

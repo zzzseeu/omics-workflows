@@ -1,12 +1,11 @@
 """Small, independently calculable statistics and empty/invalid set contracts."""
 from pathlib import Path
 import tempfile
-import sys
 import unittest
+import omics_workflows
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
-from assembly.lib import sequences as tasks
+ROOT = Path(omics_workflows.__file__).resolve().parent
+from omics_workflows.workflows.assembly.lib import sequences as tasks
 
 
 class MetricTests(unittest.TestCase):

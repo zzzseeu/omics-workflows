@@ -1,13 +1,12 @@
 """BAM dictionary translation must preserve genomic and mate coordinates."""
 from pathlib import Path
-import sys
 import tempfile
 import unittest
+import omics_workflows
 import pysam
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
-from assembly.lib.hic import bam_pairs, combine_haplotype_bams
+ROOT = Path(omics_workflows.__file__).resolve().parent
+from omics_workflows.workflows.assembly.lib.hic import bam_pairs, combine_haplotype_bams
 
 
 class HaplotypeBamTests(unittest.TestCase):
