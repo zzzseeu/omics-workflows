@@ -37,12 +37,12 @@ version = {attr = "omics_workflows.__version__"}
 include-package-data = false
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
 include = ["omics_workflows*"]
 namespaces = false
 
 [tool.setuptools.package-data]
-"omics_workflows.workflows.assembly" = [
+"omics_workflows.assembly" = [
     "Snakefile",
     "*.yaml",
     "rules/*.smk",

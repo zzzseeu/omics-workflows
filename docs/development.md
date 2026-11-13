@@ -6,23 +6,23 @@
 
 先写清分析目标和交付，再编写规则。每个模块至少确定以下内容：
 
-| 内容 | 需要明确的问题 |
-|---|---|
+| 内容 | 需要明确的问题                                                               |
+| ---- | ---------------------------------------------------------------------------- |
 | 输入 | 接受什么数据和格式；需要哪些样本信息、参考序列或数据库；相对路径以哪里为基准 |
-| 方法 | 每步的生物学目标、工具、参数和适用条件；哪些步骤可选 |
-| 输出 | 核心文件、格式、指标定义和来源清单；每步目录编号与规则、脚本一致 |
-| 校验 | 错样本、文件损坏、缺数据、工具失败如何处理；何时允许复用结果 |
-| 资源 | 各步骤线程和内存需求；是否存在并发子进程 |
-| 验收 | 软件执行完成、质量检查完成和生物学结论成立分别需要什么证据 |
+| 方法 | 每步的生物学目标、工具、参数和适用条件；哪些步骤可选                         |
+| 输出 | 核心文件、格式、指标定义和来源清单；每步目录编号与规则、脚本一致             |
+| 校验 | 错样本、文件损坏、缺数据、工具失败如何处理；何时允许复用结果                 |
+| 资源 | 各步骤线程和内存需求；是否存在并发子进程                                     |
+| 验收 | 软件执行完成、质量检查完成和生物学结论成立分别需要什么证据                   |
 
 模块不必使用样本表或七个步骤。组装、转录组、变异检测各自定义数据要求；公共模块只处理运行共性。
 
 ## 2. 准备目录和公共接口
 
-在 `src/omics_workflows/workflows/<name>/` 新建模块。以下 `seqstats` 是接入教程示例，当前正式注册的流程仍为assembly。它使用seqkit统计一个序列文件，只有一个步骤。
+在 `omics_workflows/<name>/` 新建模块。以下 `seqstats` 是接入教程示例，当前正式注册的流程仍为assembly。它使用seqkit统计一个序列文件，只有一个步骤。
 
 ```text
-src/omics_workflows/workflows/seqstats/
+omics_workflows/seqstats/
 ├── __init__.py
 ├── runner.py
 ├── Snakefile
@@ -36,20 +36,20 @@ src/omics_workflows/workflows/seqstats/
 
 Python导入目录添加 `__init__.py`；规则和示例数据子目录作为包资源。文件定位相对安装包，不能写死服务器、项目目录或环境路径。实际数据路径在预检时解析为绝对路径，写入来源记录。
 
-公共能力位于 [common/workflow.py](../src/omics_workflows/common/workflow.py)、[resources.py](../src/omics_workflows/common/resources.py)和[arguments.py](../src/omics_workflows/common/arguments.py)：
+公共能力位于 [common/workflow.py](../omics_workflows/common/workflow.py)、[resources.py](../omics_workflows/common/resources.py)和[arguments.py](../omics_workflows/common/arguments.py)：
 
-| 接口 | 输入与返回/作用 |
-|---|---|
-| `argument_parser(description, prog, epilog)` | 建立统一帮助格式；调用者逐参数填写类型、含义、单位及默认行为 |
-| `package_directory()` | 在上下文中提供安装包根目录；生命周期须覆盖Snakemake执行 |
-| `load_configuration(path, validate, normalize=None)` | 读取YAML，先按需兼容旧字段，再调用模块的Python校验函数；返回配置字典 |
-| `merge(base, override)` | 递归合并副本，override优先，不修改原字典 |
-| `validate_run_directory(...)` | 检查代码边界、资源和layout_version，不自动迁移历史结果 |
-| `inspect_tools(required, prefix, versions)` | 返回工具记录和缺失列表；只接受指定环境内工具 |
-| `stage_sources(root, rule, entries)` | 记录规则、入口及其包内依赖的SHA-256 |
-| `write_plan_metadata(plan, root, run_dir, stages, builder)` | 按步骤写JSON；builder接收sample、stage、tools、code并返回模块参数 |
-| `verify_cached_outputs(plan, rules)` | rules将编号目录映射到清单名及可选校验器；校验器接收清单路径和样本ID |
-| `execute_workflow(plan, snakefile, target, prepare, dry_run)` | 加锁、执行prepare、写计划、启动Snakemake、记录状态并返回退出码 |
+| 接口                                                            | 输入与返回/作用                                                      |
+| --------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `argument_parser(description, prog, epilog)`                  | 建立统一帮助格式；调用者逐参数填写类型、含义、单位及默认行为         |
+| `package_directory()`                                         | 在上下文中提供安装包根目录；生命周期须覆盖Snakemake执行              |
+| `load_configuration(path, validate, normalize=None)`          | 读取YAML，先按需兼容旧字段，再调用模块的Python校验函数；返回配置字典 |
+| `merge(base, override)`                                       | 递归合并副本，override优先，不修改原字典                             |
+| `validate_run_directory(...)`                                 | 检查代码边界、资源和layout_version，不自动迁移历史结果               |
+| `inspect_tools(required, prefix, versions)`                   | 返回工具记录和缺失列表；只接受指定环境内工具                         |
+| `stage_sources(root, rule, entries)`                          | 记录规则、入口及其包内依赖的SHA-256                                  |
+| `write_plan_metadata(plan, root, run_dir, stages, builder)`   | 按步骤写JSON；builder接收sample、stage、tools、code并返回模块参数    |
+| `verify_cached_outputs(plan, rules)`                          | rules将编号目录映射到清单名及可选校验器；校验器接收清单路径和样本ID  |
+| `execute_workflow(plan, snakefile, target, prepare, dry_run)` | 加锁、执行prepare、写计划、启动Snakemake、记录状态并返回退出码       |
 
 参数检查直接写在模块的 `validate_config(config: dict) -> None` 函数中：检查通过返回None，非法配置抛ConfigError。公共函数 `check_fields` 可检查必填项和未知键，`check_value` 可检查实际类型、范围及可选值；也可以使用普通Python条件语句编写专用检查。类型注解本身不执行校验。默认值继续保存在defaults.yaml，模块在读取并检查用户配置后合并默认值。
 
@@ -93,7 +93,7 @@ from omics_workflows.common.workflow import (
     write_plan_metadata,
 )
 
-BASE = "workflows/seqstats"
+BASE = "seqstats"
 ENTRY = f"{BASE}/scripts/01_stats.py"
 STAGES = {"stats": {"rule": f"{BASE}/rules/01_stats.smk", "entries": [ENTRY], "tools": {"seqkit"}}}
 
@@ -204,11 +204,11 @@ Snakefile定义分析终点并包含编号规则。脚本和依赖源码均作�
 """序列统计示例的分析终点和规则引用。"""
 from pathlib import Path
 import sys
-ROOT = Path(workflow.basedir).parents[1]
+ROOT = Path(workflow.basedir).parent
 sys.path.insert(0, str(ROOT.parent))
 from omics_workflows.common.workflow import script_sources
 PYTHON = sys.executable
-ENTRY = ROOT / "workflows/seqstats/scripts/01_stats.py"
+ENTRY = ROOT / "seqstats/scripts/01_stats.py"
 HELPERS = [str(path) for path in script_sources(ROOT, ENTRY) if path != ENTRY]
 
 rule seqstats_result:
@@ -252,7 +252,7 @@ import tempfile
 from pathlib import Path
 
 # 从脚本自身的包内位置定位导入目录，安装到任意位置均可运行。
-sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 # pylint: disable=wrong-import-position
 from omics_workflows.common.arguments import argument_parser
 from omics_workflows.common.workflow import file_checksum, source_signature, write_stable
@@ -335,21 +335,21 @@ threads: 2  # 正整数；按实际资源填写。
 
 ## 4. 注册命令、资源和依赖
 
-在 [cli.py](../src/omics_workflows/cli.py) 的WORKFLOWS中增加一项，保留已有assembly注册：
+在 [cli.py](../omics_workflows/cli.py) 的WORKFLOWS中增加一项，保留已有assembly注册：
 
 ```python
-"seqstats": ("omics_workflows.workflows.seqstats.runner", "序列数量与长度统计"),
+"seqstats": ("omics_workflows.seqstats.runner", "序列数量与长度统计"),
 ```
 
 在 [pyproject.toml](../pyproject.toml) 增加模块资源，避免源码能运行而wheel缺文件：
 
 ```toml
-"omics_workflows.workflows.seqstats" = [
+"omics_workflows.seqstats" = [
     "Snakefile", "*.yaml", "rules/*.smk", "examples/*.yaml",
 ]
 ```
 
-该条目应加入现有 `[tool.setuptools.package-data]` 表。Python包由src自动发现；运行资源须显式声明。模块新增的直接Python依赖写入 `project.optional-dependencies.<name>`，通用依赖写入project.dependencies；seqkit等生信软件列入 [environment.yaml](../env/environment.yaml) 并保存实际部署锁，不在分析中自动安装软件或数据库。本例所需seqkit已在统一环境需求中。
+该条目应加入现有 `[tool.setuptools.package-data]` 表。Python包由仓库根目录下的omics_workflows自动发现；运行资源须显式声明。模块新增的直接Python依赖写入 `project.optional-dependencies.<name>`，通用依赖写入project.dependencies。seqkit等生信软件、版本和数据库要求写入该模块手册；模块可以使用自己的环境，兼容时也可复用已有环境。实际部署记录和精确包锁由使用项目维护，分析流程不自动安装软件或数据库。本例要求所选环境具备seqkit。
 
 为每个模块添加一份 `docs/workflows/<name>.md`，说明输入、方法、输出格式、质量检查和运行示例，并更新[文档导航](README.md)。[Assembly手册](workflows/assembly.md)仅描述组装方法，不作为公共接口的定义。
 
@@ -389,14 +389,14 @@ runs/seqstats001/
 
 还须执行以下验证，不能只确认--help可启动：
 
-| 检查 | 应验证的行为 |
-|---|---|
-| 配置与输入 | 拒绝未知键、非法类型、重复样本、错误格式和错误数据引用；相对路径可正确解析 |
-| 方法与交付 | 用小型已知输入核对实际结果、计数、文件格式和样本身份 |
-| 失败传播 | 工具非零退出时整个步骤失败，不生成新的COMPLETED清单 |
+| 检查       | 应验证的行为                                                                      |
+| ---------- | --------------------------------------------------------------------------------- |
+| 配置与输入 | 拒绝未知键、非法类型、重复样本、错误格式和错误数据引用；相对路径可正确解析        |
+| 方法与交付 | 用小型已知输入核对实际结果、计数、文件格式和样本身份                              |
+| 失败传播   | 工具非零退出时整个步骤失败，不生成新的COMPLETED清单                               |
 | 来源及恢复 | 记录输入指纹、软件/数据库版本和参数；相同命令重跑不重复计算；损坏结果不能直接复用 |
-| 修改范围 | 只改某一步参数时，未受影响的前序步骤保持有效 |
-| 安装 | 构建wheel，在仓库外安装并运行，确认规则、配置和模板齐全 |
+| 修改范围   | 只改某一步参数时，未受影响的前序步骤保持有效                                      |
+| 安装       | 构建wheel，在仓库外安装并运行，确认规则、配置和模板齐全                           |
 
 正式模块按自身数据增加专用结果校验函数，并传给verify_cached_outputs；通用校验器只检查清单中声明的文件，不能理解某个指标的生物学含义。示例的一行序列统计不能替代测序数据质控或完整生物学分析。
 
@@ -405,7 +405,7 @@ runs/seqstats001/
 每个生产函数写docstring：小函数说明用途和返回值；复杂函数补充输入、输出、副作用、失败条件和关键约束。注释解释分析选择、坐标口径、来源核验和资源分配，不逐行复述语句。参数含义写入--help；YAML示例逐key注明类型、单位、可选值和覆盖关系。
 
 ```bash
-python -m pylint --rcfile=.pylintrc --enable=missing-function-docstring src env run.py
+python -m pylint --rcfile=.pylintrc --enable=missing-function-docstring omics_workflows
 python -m pylint --rcfile=.pylintrc tests/test_packaging.py
 python -m unittest discover -s tests -t . -p 'test_*.py'
 python -m build
@@ -414,10 +414,12 @@ python -m pip install --force-reinstall --no-deps dist/omics_workflows-0.1.0-py3
 
 上述wheel安装命令适用于依赖已准备好的分析环境；`--force-reinstall`用于更新已有同版本框架，`--no-deps`保留已部署依赖。新环境先按环境定义准备所需软件。
 
-版本由包内 `__version__` 定义；更新版本时同时检查安装示例。wheel包含代码和运行资源，源码包另含环境定义、文档和测试。发布前从仓库外验证安装版本的命令、资源、预检、预演及小型运行，不依赖开发安装掩盖漏打包文件。
+版本由包内 `__version__` 定义；更新版本时同时检查安装示例。wheel包含代码和运行资源，源码包另含环境定义、文档和测试。发布前从仓库外验证安装版本的命令、资源、预检、预演及小型运行，不依赖开发安装掩盖漏打包文件。当前采用平铺包目录，安装验收先导入已安装的omics_workflows，再从源码发现测试，避免测试目录加入搜索路径后误用仓库源码。
 
 ## 7. 维护现有结果
 
-组装继续使用layout_version=3及01至07编号目录；新增模块独立维护自己的布局版本。更改结果格式时明确兼容规则，不自动移动或覆盖旧运行；必要时使用新run-dir。[历史组装迁移工具](legacy/assembly_migrate_layout.py)仅处理旧01至10布局。
+组装继续使用layout_version=3及01至07编号目录；新增模块独立维护自己的布局版本。更改结果格式时明确兼容规则，不自动移动或覆盖旧运行。旧布局结果保留在原目录，新分析使用新的run-dir。
 
 每步来源记录只纳入相关工具、代码和参数。完善/纠错前的坐标不能直接用于修改后的序列；程序完成、质量评估完成与生物学验收分别记录。真实样本、任务日志和验证证据保存在项目目录。
+
+精简包目录后，分析结果仍使用原步骤编号与布局版本。旧版本任务建议使用原安装版本续跑；切换到新代码会改变步骤来源记录，可能触发重算，不自动改写旧清单或Snakemake记录。

@@ -22,7 +22,21 @@
 
 单套及二倍体可选 `assembly.mode: hifi_hic` 或 `hifi_ul_hic`；多倍体用 `hifi_ul_hic`。仅有 HiFi 时保留 `hifi_only` contig 终点，不将其报告为染色体组装或完整七类最终评估。
 
-统一环境的使用和安装见[环境管理](../environment.md)。新增依赖已列入 [environment.yaml](../../env/environment.yaml)；当前旧环境可能缺少 NanoPlot、NanoFilt、HiFiAdapterFilt 或 LTR 工具，先运行 `--check`。`--dry-run` 允许展示缺依赖的 DAG，但会明确列出缺项，不能据此认为具备实际运行条件。
+为本模块准备满足组装需求的环境，环境选择方式见[环境管理](../environment.md)。基础依赖参考 [environment.yaml](../../env/environment.yaml)，额外工具及部署要求如下。运行前执行 `--check`；`--dry-run` 允许展示缺依赖的 DAG，但会明确列出缺项，不能据此认为具备实际运行条件。
+
+### 工具版本与部署要求
+
+| 工具 | 当前适配的来源或版本 | 用途 |
+|---|---|---|
+| HapHiC | 1.0.7，commit `74f1cb27d7753ce061ee673c0d62fdd44187060e` | 单套参考及二倍体染色体挂载 |
+| GPhase | commit `a9221035274e7397fc05dc5be693270c2758528c` | 多倍体分相与挂载，含 popCNV 拷贝数估计 |
+| YaHS | 1.2.2，commit `9b2cc15740f03e84dffe248fab04445c994f17ab` | GPhase 内部挂载 |
+| quarTeT | 1.3.1，commit `a44d8c87e3f4bcefaf43dc4134e88b6a21890265` | 可选补洞 |
+| NextPolish2 | 0.2.2 | 可选 HiFi＋普通 WGS 碱基纠错 |
+
+当前多倍体实现从环境内的 `opt/GPhase/source/src/popCNV/popCNV.py` 调用 popCNV；GPhase 源码、附加 Python 包和入口分别位于 `opt/GPhase/source/`、`opt/GPhase/python/`、`opt/GPhase/bin/`。附加包采用上游需求，其中 statsmodels 0.15.0 用于兼容已有 pandas，部署时核对其余依赖。GPhase 的 `pipeline/gphase_pipeline.sh` 调用 `cluster_hap.py` 时需追加 `--process_num ${thread} --thread_num 1`，使内部聚类遵循外层线程预算。
+
+沿用既有 T2T 扩展部署时，其入口位于 `opt/T2T/bin/`。基础 tidk 使用 0.3.1；Inspector 用于另行开展的错误定位。采用上述 `opt/GPhase` 或 `opt/T2T` 布局时，保留环境内相应的 `SOURCE_LOCK.json`；流程会核对工具源码和文件指纹，项目保存对应部署记录。BUSCO lineage 由项目提供，需包含 `dataset.cfg`，分析使用离线模式。
 
 ## 2. 配置文件
 
@@ -92,11 +106,11 @@ defaults:
 
 仅在需要修改组装时开启 finishing，再选择 gap_closing、telomere_completion；两项独立。碱基纠错由 polishing.enabled 独立控制，不要求先开启补洞。最终七类评估独立于这两个开关，完整染色体报告不能关闭它。
 
-参数默认值见 [defaults.yaml](../../src/omics_workflows/workflows/assembly/defaults.yaml)，类型、取值和组合条件由 [runner.py中的检查函数](../../src/omics_workflows/workflows/assembly/runner.py)定义。配置模板见 [单套参考](../../src/omics_workflows/workflows/assembly/examples/single_hic/config.yaml)、[二倍体分相](../../src/omics_workflows/workflows/assembly/examples/hifi_ul_hic/config.yaml)和[多倍体分相](../../src/omics_workflows/workflows/assembly/examples/polyploid/config.yaml)；替换样本数据、建库信息和数据库路径后再检查。
+参数默认值见 [defaults.yaml](../../omics_workflows/assembly/defaults.yaml)，类型、取值和组合条件由 [runner.py中的检查函数](../../omics_workflows/assembly/runner.py)定义。配置模板见 [单套参考](../../omics_workflows/assembly/examples/single_hic/config.yaml)、[二倍体分相](../../omics_workflows/assembly/examples/hifi_ul_hic/config.yaml)和[多倍体分相](../../omics_workflows/assembly/examples/polyploid/config.yaml)；替换样本数据、建库信息和数据库路径后再检查。
 
 ## 3. 七个步骤的实现与输入输出
 
-`omics_workflows/workflows/assembly/scripts/` 只保留七个带编号的步骤入口，共享实现位于 `omics_workflows/workflows/assembly/lib/`。下列路径相对 `samples/<sample_id>/`，入口、目录编号与步骤一一对应。JSON 清单记录文件校验值、来源和参数，供后续步骤核对。
+`omics_workflows/assembly/scripts/` 只保留七个带编号的步骤入口，共享实现位于 `omics_workflows/assembly/lib/`。下列路径相对 `samples/<sample_id>/`，入口、目录编号与步骤一一对应。JSON 清单记录文件校验值、来源和参数，供后续步骤核对。
 
 | 步骤与实现入口 | 输入 | 实现方式与工具 | 核心输出及格式 |
 |---|---|---|---|
@@ -150,7 +164,7 @@ Inspector 错误定位、独立相位验证和污染筛查属于另行开展的�
 
 ## 4. 运行与恢复
 
-在统一环境中运行，或用 --env-prefix 指定环境。HPC 上由项目提交一个 CSUB 作业，内部以 Snakemake local executor 执行；--cores、--mem-mb 与申请资源一致。
+在已准备好的组装环境中运行，或用 --env-prefix 指定其路径。HPC 上由项目提交一个 CSUB 作业，内部以 Snakemake local executor 执行；--cores、--mem-mb 与申请资源一致。
 
 ```bash
 OMICS_ENV_PREFIX=/absolute/path/to/envs/omics_workflows
@@ -179,19 +193,19 @@ omics-workflows assembly \
 三个后处理脚本均可独立调用 --help。固定输入为组装清单和质控后读段清单，参数由 Python 命令行指定：
 
 ```bash
-python -m omics_workflows.workflows.assembly.scripts.04_finish_chromosomes \
+python -m omics_workflows.assembly.scripts.04_finish_chromosomes \
   --assembly-manifest /run/samples/rice01/03_assembly/delivery/manifest.json \
   --reads-manifest /run/samples/rice01/02_read_qc/manifest.json \
   --gap-closing --telomere-completion --telomere-motif TTTAGGG \
   --threads 8 --out-dir /run/samples/rice01/04_finishing
 
-python -m omics_workflows.workflows.assembly.scripts.05_polish_chromosomes \
+python -m omics_workflows.assembly.scripts.05_polish_chromosomes \
   --assembly-manifest /run/samples/rice01/04_finishing/manifest.json \
   --reads-manifest /run/samples/rice01/02_read_qc/manifest.json \
   --kmer-sizes 21 31 --min-mapq 30 --threads 8 \
   --out-dir /run/samples/rice01/05_polishing
 
-python -m omics_workflows.workflows.assembly.scripts.06_assess_assembly \
+python -m omics_workflows.assembly.scripts.06_assess_assembly \
   --assembly-manifest /run/samples/rice01/05_polishing/manifest.json \
   --reads-manifest /run/samples/rice01/02_read_qc/manifest.json \
   --busco-lineage /path/to/appropriate_lineage --telomere-motif TTTAGGG \

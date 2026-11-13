@@ -6,7 +6,7 @@ import omics_workflows
 import pysam
 
 ROOT = Path(omics_workflows.__file__).resolve().parent
-from omics_workflows.workflows.assembly.lib.hic import bam_pairs, combine_haplotype_bams
+from omics_workflows.assembly.lib.hic import bam_pairs, combine_haplotype_bams
 
 
 class HaplotypeBamTests(unittest.TestCase):

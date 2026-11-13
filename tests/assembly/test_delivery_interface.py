@@ -7,12 +7,12 @@ import unittest
 import omics_workflows
 
 ROOT = Path(omics_workflows.__file__).resolve().parent
-from omics_workflows.workflows.assembly.lib.sequences import parse_agp, reconstruct
-from omics_workflows.workflows.assembly.lib.scaffolding import deliver
-from omics_workflows.workflows.assembly.lib.scaffolding import export_polyploid as export
-from omics_workflows.workflows.assembly.lib.sequences import fasta_dict, write_fasta
-from omics_workflows.workflows.assembly.lib.io import checksum, load, save
-from omics_workflows.workflows.assembly.lib.postassembly import assembly_bundle
+from omics_workflows.assembly.lib.sequences import parse_agp, reconstruct
+from omics_workflows.assembly.lib.scaffolding import deliver
+from omics_workflows.assembly.lib.scaffolding import export_polyploid as export
+from omics_workflows.assembly.lib.sequences import fasta_dict, write_fasta
+from omics_workflows.assembly.lib.io import checksum, load, save
+from omics_workflows.assembly.lib.postassembly import assembly_bundle
 
 
 class DeliveryInterfaceTests(unittest.TestCase):

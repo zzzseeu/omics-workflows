@@ -14,19 +14,19 @@ ROOT = Path(omics_workflows.__file__).resolve().parent
 
 # Numbered entry modules are loaded with importlib.
 # pylint: disable=wrong-import-position,wrong-import-order
-from omics_workflows.workflows.assembly.lib.assessment import mapping_metrics, quast_metrics, telomere_metrics
-from omics_workflows.workflows.assembly.lib.io import checksum, load, save, signature
-from omics_workflows.workflows.assembly.lib.sequences import fasta_dict, fasta_statistics
+from omics_workflows.assembly.lib.assessment import mapping_metrics, quast_metrics, telomere_metrics
+from omics_workflows.assembly.lib.io import checksum, load, save, signature
+from omics_workflows.assembly.lib.sequences import fasta_dict, fasta_statistics
 
 prepare_sample = importlib.import_module(
-    "omics_workflows.workflows.assembly.scripts.01_prepare_inputs"
+    "omics_workflows.assembly.scripts.01_prepare_inputs"
 ).prepare_sample
-from omics_workflows.workflows.assembly.lib.postassembly import artifact, assembly_bundle
+from omics_workflows.assembly.lib.postassembly import artifact, assembly_bundle
 
 
 def invoke(script, *arguments):
     subprocess.run(
-        [sys.executable, str(ROOT / "workflows/assembly/scripts" / script), *map(str, arguments)], check=True
+        [sys.executable, str(ROOT / "assembly/scripts" / script), *map(str, arguments)], check=True
     )
 
 
