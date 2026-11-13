@@ -15,10 +15,12 @@ from pathlib import Path
 
 
 def load(path):
+    """读取历史运行的JSON对象，不修改文件。"""
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
 def save(path, value):
+    """以临时文件替换方式写入迁移日志或更新后的JSON，保留规范格式。"""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
@@ -27,6 +29,7 @@ def save(path, value):
 
 
 def sha256(path):
+    """分块计算历史交付文件的SHA-256，供迁移前后比对。"""
     value = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(8 * 1024 * 1024), b""):
@@ -35,11 +38,13 @@ def sha256(path):
 
 
 def stat_record(path):
+    """返回文件大小、时间、inode和设备号，检查迁移是否保留原文件身份。"""
     stat = path.stat()
     return {"size": stat.st_size, "mtime_ns": stat.st_mtime_ns, "inode": stat.st_ino, "device": stat.st_dev}
 
 
 def mappings(run):
+    """按历史样本顺序生成旧目录到layout-2编号目录的映射，不适用于当前七步布局。"""
     pairs = [("reports", "10_reports"), ("logs/batch_report.log", "logs/10_reports/batch_report.log")]
     for sample in load(run / "config/plan.json")["sample_order"]:
         base = f"samples/{sample}"
@@ -67,6 +72,7 @@ def mappings(run):
 
 
 def translated(text, run, pairs):
+    """根据迁移映射转换单个路径字符串，优先匹配长前缀，其他文本原样返回。"""
     for old, new in sorted(pairs, key=lambda pair: len(pair[0]), reverse=True):
         for prefix in [str(run) + "/", ""]:
             source, target = prefix + old, prefix + new
@@ -76,6 +82,7 @@ def translated(text, run, pairs):
 
 
 def rewrite(value, run, pairs):
+    """递归更新历史元数据中的文件引用；原始命令、代码指纹和运行时间等证据保留原值。"""
     if isinstance(value, str):
         return translated(value, run, pairs)
     if isinstance(value, list):
@@ -98,6 +105,7 @@ def rewrite(value, run, pairs):
 
 
 def check_artifact_links(run):
+    """核验迁移后报告引用的FASTA、索引及批次清单仍存在且匹配历史校验值。"""
     for sid in load(run / "config/plan.json")["sample_order"]:
         report = load(run / f"samples/{sid}/10_report/manifest.json")
         assert Path(report["assembly_manifest"]).is_file(), report["assembly_manifest"]
@@ -116,6 +124,10 @@ def check_artifact_links(run):
 
 
 def migrate(run, apply=False):
+    """规划或执行已成功完成运行的历史目录迁移，返回迁移记录；默认仅规划。
+
+    实际迁移取得运行锁并保存可恢复日志，不重新组装，也不把旧结果宣称为新代码执行结果。
+    """
     run = Path(run).resolve()
     state = load(run / "run_status.json")
     if state.get("status") != "COMPLETED" or state.get("exit_code") != 0:
@@ -234,6 +246,7 @@ def migrate(run, apply=False):
 
 
 def main():
+    """解析历史迁移目录与apply开关，打印计划或迁移状态，隐藏大体积文件清单。"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-dir", required=True, type=Path)
     parser.add_argument("--apply", action="store_true")

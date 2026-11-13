@@ -1,0 +1,80 @@
+"""Seven numbered stages for single-reference, diploid and polyploid assemblies."""
+from pathlib import Path
+import sys
+
+ROOT = Path(workflow.basedir).parents[1]
+sys.path.insert(0, str(ROOT.parent))
+from omics_workflows.common.workflow import script_sources
+PYTHON = sys.executable
+SAMPLES = config['sample_order']
+CHROMOSOME_SAMPLES = [s for s in SAMPLES if config['samples'][s]['settings']['scaffolding']['enabled']]
+CONTIG_SAMPLES = [s for s in SAMPLES if s not in CHROMOSOME_SAMPLES]
+
+
+def script_path(name):
+    return str(ROOT / 'workflows/assembly/scripts' / (name + '.py'))
+
+
+def script_helpers(name):
+    entry = Path(script_path(name)).resolve()
+    return [str(path) for path in script_sources(ROOT, entry) if path != entry]
+
+
+def sample_setting(wildcards, group, field):
+    return config['samples'][wildcards.sample]['settings'][group][field]
+
+
+def raw_files(wildcards):
+    return [read[key] for read in config['samples'][wildcards.sample]['readsets'].values()
+            for key in ('file1', 'file2') if read.get(key)]
+
+
+def stage_input(wildcards):
+    settings = config['samples'][wildcards.sample]['settings']
+    return settings['finishing']['source_delivery'] or f'samples/{wildcards.sample}/03_assembly/delivery'
+
+
+def external_sources(wildcards):
+    source = config['samples'][wildcards.sample]['settings']['finishing']['source_delivery']
+    if not source:
+        return []
+    import json
+    data = json.loads(Path(source).read_text())
+    return [str(Path(source).parent / (label + '.fa')) for label in data['sets']]
+
+
+def final_assembly(wildcards):
+    if wildcards.sample in CHROMOSOME_SAMPLES:
+        return f'samples/{wildcards.sample}/05_polishing'
+    return f'samples/{wildcards.sample}/03_assembly/contigs'
+
+
+rule assembly_report:
+    input:
+        expand('samples/{sample}/07_report', sample=SAMPLES),
+        '07_report/summary.html',
+        '07_report/summary.tsv'
+
+
+rule assembly_contigs:
+    input: expand('samples/{sample}/03_assembly/contigs', sample=SAMPLES)
+
+
+rule assembly_chromosomes:
+    input: expand('samples/{sample}/03_assembly/delivery', sample=CHROMOSOME_SAMPLES)
+
+
+rule assembly_t2t:
+    input:
+        expand('samples/{sample}/07_report', sample=CHROMOSOME_SAMPLES),
+        '07_report/summary.html',
+        '07_report/summary.tsv'
+
+
+include: 'rules/01_inputs.smk'
+include: 'rules/02_read_qc.smk'
+include: 'rules/03_assembly.smk'
+include: 'rules/04_finishing.smk'
+include: 'rules/05_polishing.smk'
+include: 'rules/06_assessment.smk'
+include: 'rules/07_report.smk'

@@ -1,9 +1,9 @@
 """Public command and project-boundary contracts for the simplified source layout."""
 
-from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -11,7 +11,11 @@ ROOT = Path(__file__).resolve().parents[1]
 class InterfaceTests(unittest.TestCase):
     def invoke(self, *args):
         return subprocess.run(
-            ["/usr/bin/python3", str(ROOT / "run"), *args], capture_output=True, text=True, timeout=30
+            ["/usr/bin/python3", str(ROOT / "run.py"), *args],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
         )
 
     def test_root_help_without_analysis_environment(self):
@@ -33,7 +37,11 @@ class InterfaceTests(unittest.TestCase):
     def test_direct_assembly_help_outside_repository_without_analysis_environment(self):
         with tempfile.TemporaryDirectory() as directory:
             result = subprocess.run(
-                ["/usr/bin/python3", str(ROOT / "assembly/runner.py"), "--help"],
+                [
+                    "/usr/bin/python3",
+                    str(ROOT / "src/omics_workflows/workflows/assembly/runner.py"),
+                    "--help",
+                ],
                 cwd=directory,
                 capture_output=True,
                 text=True,
@@ -49,8 +57,12 @@ class InterfaceTests(unittest.TestCase):
             self.assertNotIn("#CSUB", path.read_text())
         self.assertFalse((ROOT / "launchers").exists())
         self.assertEqual(
-            {p.name for p in ROOT.iterdir() if p.is_dir() and not p.name.startswith(".")},
-            {"assembly", "common", "env", "tests", "docs"},
+            {
+                p.name
+                for p in ROOT.iterdir()
+                if p.is_dir() and not p.name.startswith(".") and p.name not in {"build", "dist"}
+            },
+            {"src", "env", "tests", "docs"},
         )
 
 

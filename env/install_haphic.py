@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def main():
+    """向指定环境部署固定版本HapHiC，核对源码/入口并记录来源锁；可使用已有官方源码目录。"""
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--env-prefix", type=Path, required=True)
     p.add_argument("--source-dir", type=Path, help="Existing official Git checkout; otherwise clone upstream")

@@ -12,6 +12,10 @@ from pathlib import Path
 
 
 def main():
+    """检查统一环境的工具和Python依赖，并用合成数据验证原生组装、比对及Snakemake执行与恢复。
+
+    输出各检查日志和validation.json；数据库未验证或真实样本未运行等限制单独记录。
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
@@ -20,6 +24,7 @@ def main():
     checks = []
 
     def run(name, command, accepted=(0,), stdout_path=None):
+        """在验收目录执行单个检查并保存标准输出/错误日志；仅接受指定退出码，失败时抛出异常。"""
         with ExitStack() as stack:
             log = stack.enter_context((out / (name + ".log")).open("w"))
             target = stack.enter_context(stdout_path.open("w")) if stdout_path else log

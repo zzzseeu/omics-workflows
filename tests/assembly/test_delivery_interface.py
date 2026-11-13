@@ -1,19 +1,18 @@
 """Both routes deliver self-contained AGP sequences and the same public fields."""
 import csv
 from pathlib import Path
-import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
+import omics_workflows
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
-from assembly.lib.sequences import parse_agp, reconstruct
-from assembly.lib.scaffolding import deliver
-from assembly.lib.scaffolding import export_polyploid as export
-from assembly.lib.sequences import fasta_dict, write_fasta
-from assembly.lib.io import checksum, load, save
-from assembly.lib.postassembly import assembly_bundle
+ROOT = Path(omics_workflows.__file__).resolve().parent
+from omics_workflows.workflows.assembly.lib.sequences import parse_agp, reconstruct
+from omics_workflows.workflows.assembly.lib.scaffolding import deliver
+from omics_workflows.workflows.assembly.lib.scaffolding import export_polyploid as export
+from omics_workflows.workflows.assembly.lib.sequences import fasta_dict, write_fasta
+from omics_workflows.workflows.assembly.lib.io import checksum, load, save
+from omics_workflows.workflows.assembly.lib.postassembly import assembly_bundle
 
 
 class DeliveryInterfaceTests(unittest.TestCase):
@@ -89,7 +88,6 @@ class DeliveryInterfaceTests(unittest.TestCase):
                 for name in manifest['artifacts']['sequence_sets'].values():
                     self.assertTrue((base / name).is_file(), name)
                 self.assertEqual(manifest['analysis_stage'], 'phasing_scaffolding')
-                self.assertEqual(manifest['delivery_schema_version'], 1)
                 self.assertEqual(manifest['ploidy'], ploidy)
                 self.assertEqual(manifest['phase_validation'], 'NOT_ASSESSED')
                 self.assertEqual(len(set(groups.values())), ploidy)

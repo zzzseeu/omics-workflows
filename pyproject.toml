@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "omics-workflows"
+dynamic = ["version"]
+description = "Reusable command-line workflows for omics analysis"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "PyYAML>=6,<7",
+    "psutil>=5,<8",
+    "snakemake>=9,<10",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+[project.optional-dependencies]
+assembly = ["pysam>=0.22,<1"]
+dev = ["pylint==3.3.8", "black==25.1.0", "build>=1,<2"]
+
+[project.scripts]
+omics-workflows = "omics_workflows.cli:main"
+
+[project.urls]
+Repository = "https://github.com/zzzseeu/omics-workflows"
+
+[tool.setuptools.dynamic]
+version = {attr = "omics_workflows.__version__"}
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["omics_workflows*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+"omics_workflows.workflows.assembly" = [
+    "Snakefile",
+    "*.yaml",
+    "rules/*.smk",
+    "examples/*/*.yaml",
+    "examples/*/*.tsv",
+]

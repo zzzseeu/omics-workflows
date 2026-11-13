@@ -3,10 +3,11 @@ import copy
 from pathlib import Path
 import tempfile
 import unittest
+import omics_workflows
 import yaml
 
-ROOT = Path(__file__).resolve().parents[2]
-from assembly import runner as module
+ROOT = Path(omics_workflows.__file__).resolve().parent
+from omics_workflows.workflows.assembly import runner as module
 
 
 class ConfigTests(unittest.TestCase):
@@ -20,7 +21,7 @@ class ConfigTests(unittest.TestCase):
             'sample_id\treadset_id\tlibrary_id\ttechnology\tformat\tfile1\n'
             'A\tr1\tl1\thifi\tfastq\treads.fq\n'
             'B\tr1\tl1\thifi\tfastq\tmissing.fq\n')
-        self.config = {'schema_version': 1, 'samples_table': 'samples.tsv',
+        self.config = {'samples_table': 'samples.tsv',
                        'readsets_table': 'readsets.tsv',
                        'defaults': {'assembly': {'mem_mb': 2048, 'bloom_filter_bits': 0}}}
 
@@ -33,6 +34,12 @@ class ConfigTests(unittest.TestCase):
         result = self.resolve()
         self.assertEqual(result['sample_order'], ['A'])
         self.assertIsNone(result['samples']['A']['settings']['ploidy'])
+
+    def test_plan_contains_only_current_run_fields(self):
+        self.assertEqual(set(self.resolve()), {
+            'layout_version', 'config_path', 'repository', 'framework', 'run_dir',
+            'budget', 'sample_order', 'samples', 'workflow_route',
+        })
 
     def test_genome_profiling_is_not_an_assembly_stage(self):
         self.assertNotIn('genome_profile', self.resolve()['samples']['A']['settings'])
@@ -125,7 +132,7 @@ class ConfigTests(unittest.TestCase):
         run = self.path / 'run'
         (run / 'config').mkdir(parents=True)
         (run / 'samples').mkdir()
-        (run / 'config/plan.json').write_text(json.dumps({'schema_version': 1}))
+        (run / 'config/plan.json').write_text(json.dumps({}))
         with self.assertRaisesRegex(module.ConfigError, 'Legacy output layout'):
             self.resolve()
 

@@ -21,7 +21,6 @@ dependencies:
 - merqury>=1.4.1
 - multiqc
 - pyyaml
-- jsonschema
 - bwa
 - samblaster
 - scipy

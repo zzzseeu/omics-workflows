@@ -8,6 +8,9 @@ reports/
 .conda/
 __pycache__/
 *.pyc
+build/
+dist/
+*.egg-info/
 
 # Local editor settings.
 /.vscode/

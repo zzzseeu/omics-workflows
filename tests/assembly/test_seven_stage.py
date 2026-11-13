@@ -1,40 +1,54 @@
 """Seven-stage contracts: copy identity, input integrity and final assessment state."""
 
-import importlib
-
-from contextlib import ExitStack
 import csv
 import gzip
-from pathlib import Path
+import importlib
 import subprocess
 import sys
 import tempfile
-from types import SimpleNamespace
 import unittest
+from contextlib import ExitStack
+from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import yaml
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
+import omics_workflows
 
-# Local scripts must be imported after adding their repository path.
+ROOT = Path(omics_workflows.__file__).resolve().parent
+
+# Numbered entry modules are loaded with importlib.
 # pylint: disable=wrong-import-position,wrong-import-order
-from common.workflow import script_sources
+from omics_workflows.common.workflow import script_sources
 
-assess_assembly = importlib.import_module("assembly.scripts.06_assess_assembly")
-from assembly.lib import assessment as assessment_tools
-from assembly.runner import resolve_config, verify_cached_outputs, verify_source_locks
-from assembly.lib.assembly import run_gphase
-from assembly.lib.assessment import interval_length, ltr_fractions, number
-from assembly.lib.sequences import fasta_statistics
-from assembly.lib.io import checksum, load, save, signature
+assess_assembly = importlib.import_module("omics_workflows.workflows.assembly.scripts.06_assess_assembly")
+from omics_workflows.workflows.assembly.lib import assessment as assessment_tools
+from omics_workflows.workflows.assembly.lib.assembly import run_gphase
+from omics_workflows.workflows.assembly.lib.assessment import interval_length, ltr_fractions, number
+from omics_workflows.workflows.assembly.lib.io import checksum, load, save, signature
+from omics_workflows.workflows.assembly.lib.sequences import fasta_statistics
+from omics_workflows.workflows.assembly.runner import (
+    resolve_config,
+    verify_cached_outputs,
+    verify_source_locks,
+)
 
-prepare_sample = importlib.import_module("assembly.scripts.01_prepare_inputs").prepare_sample
-merge_wgs = importlib.import_module("assembly.scripts.05_polish_chromosomes").merge_wgs
-quality_reads = importlib.import_module("assembly.scripts.02_quality_reads")
+prepare_sample = importlib.import_module(
+    "omics_workflows.workflows.assembly.scripts.01_prepare_inputs"
+).prepare_sample
+merge_wgs = importlib.import_module(
+    "omics_workflows.workflows.assembly.scripts.05_polish_chromosomes"
+).merge_wgs
+quality_reads = importlib.import_module("omics_workflows.workflows.assembly.scripts.02_quality_reads")
 filter_long = quality_reads.filter_long
-from assembly.lib.postassembly import artifact, assembly_bundle, fastq_statistics, passthrough, read_bundle
+from omics_workflows.workflows.assembly.lib.postassembly import (
+    artifact,
+    assembly_bundle,
+    fastq_statistics,
+    passthrough,
+    read_bundle,
+)
 
 
 # Each method tests a distinct workflow contract.
@@ -209,7 +223,6 @@ class SevenStageTests(unittest.TestCase):
             lines.append(f'S\t{technology}\t{technology}\t{technology}\tfastq\t{first}\t{mate or ""}')
         (self.path / "readsets.tsv").write_text("\n".join(lines) + "\n")
         config = {
-            "schema_version": 1,
             "samples_table": "samples.tsv",
             "readsets_table": "readsets.tsv",
             "defaults": {
@@ -490,7 +503,7 @@ class SevenStageTests(unittest.TestCase):
             "07_write_assembly_report.py",
         ):
             result = subprocess.run(
-                [sys.executable, str(ROOT / "assembly/scripts" / name), "--help"],
+                [sys.executable, str(ROOT / "workflows/assembly/scripts" / name), "--help"],
                 capture_output=True,
                 text=True,
                 check=False,
@@ -500,16 +513,16 @@ class SevenStageTests(unittest.TestCase):
             self.assertIn("--out-dir", result.stdout)
 
     def test_exactly_seven_numbered_entries_and_shared_dependency_boundaries(self):
-        entries = sorted((ROOT / "assembly/scripts").glob("[0-9][0-9]_*.py"))
+        entries = sorted((ROOT / "workflows/assembly/scripts").glob("[0-9][0-9]_*.py"))
         self.assertEqual([path.name[:3] for path in entries], [f"{i:02d}_" for i in range(1, 8)])
-        assembler = set(script_sources(ROOT, "assembly/scripts/03_assemble_genome.py"))
-        assessment = set(script_sources(ROOT, "assembly/scripts/06_assess_assembly.py"))
-        self.assertIn(ROOT / "assembly/lib/assembly.py", assembler)
-        self.assertIn(ROOT / "assembly/lib/scaffolding.py", assembler)
-        self.assertIn(ROOT / "assembly/lib/__init__.py", assembler)
-        self.assertNotIn(ROOT / "assembly/lib/assessment.py", assembler)
-        self.assertIn(ROOT / "assembly/lib/assessment.py", assessment)
-        self.assertNotIn(ROOT / "assembly/lib/assembly.py", assessment)
+        assembler = set(script_sources(ROOT, "workflows/assembly/scripts/03_assemble_genome.py"))
+        assessment = set(script_sources(ROOT, "workflows/assembly/scripts/06_assess_assembly.py"))
+        self.assertIn(ROOT / "workflows/assembly/lib/assembly.py", assembler)
+        self.assertIn(ROOT / "workflows/assembly/lib/scaffolding.py", assembler)
+        self.assertIn(ROOT / "workflows/assembly/lib/__init__.py", assembler)
+        self.assertNotIn(ROOT / "workflows/assembly/lib/assessment.py", assembler)
+        self.assertIn(ROOT / "workflows/assembly/lib/assessment.py", assessment)
+        self.assertNotIn(ROOT / "workflows/assembly/lib/assembly.py", assessment)
 
     def test_gphase_shared_function_preserves_ploidy_and_published_links(self):
         calls = []
@@ -559,7 +572,7 @@ class SevenStageTests(unittest.TestCase):
                     (cwd / "internal_link").symlink_to(scaffold / "gphase_final.unitig.fasta")
 
                 output = folder / "gphase"
-                with patch("assembly.lib.assembly.execute", native):
+                with patch("omics_workflows.workflows.assembly.lib.assembly.execute", native):
                     run_gphase(
                         SimpleNamespace(
                             metadata=metadata,

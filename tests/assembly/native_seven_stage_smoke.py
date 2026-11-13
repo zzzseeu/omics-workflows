@@ -1,29 +1,32 @@
 #!/usr/bin/env python3
 """Native component smoke checks on synthetic data; not biological validation."""
-import importlib
 import argparse
-from pathlib import Path
+import importlib
 import random
 import subprocess
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
+import omics_workflows
 
-# Local scripts must be imported after adding their repository path.
+ROOT = Path(omics_workflows.__file__).resolve().parent
+
+# Numbered entry modules are loaded with importlib.
 # pylint: disable=wrong-import-position,wrong-import-order
-from assembly.lib.assessment import mapping_metrics, quast_metrics, telomere_metrics
-from assembly.lib.sequences import fasta_dict, fasta_statistics
-from assembly.lib.io import checksum, load, save, signature
+from omics_workflows.workflows.assembly.lib.assessment import mapping_metrics, quast_metrics, telomere_metrics
+from omics_workflows.workflows.assembly.lib.io import checksum, load, save, signature
+from omics_workflows.workflows.assembly.lib.sequences import fasta_dict, fasta_statistics
 
-prepare_sample = importlib.import_module("assembly.scripts.01_prepare_inputs").prepare_sample
-from assembly.lib.postassembly import artifact, assembly_bundle
+prepare_sample = importlib.import_module(
+    "omics_workflows.workflows.assembly.scripts.01_prepare_inputs"
+).prepare_sample
+from omics_workflows.workflows.assembly.lib.postassembly import artifact, assembly_bundle
 
 
 def invoke(script, *arguments):
     subprocess.run(
-        [sys.executable, str(ROOT / "assembly/scripts" / script), *map(str, arguments)], check=True
+        [sys.executable, str(ROOT / "workflows/assembly/scripts" / script), *map(str, arguments)], check=True
     )
 
 
